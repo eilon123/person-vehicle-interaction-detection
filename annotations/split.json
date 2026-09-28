@@ -1,0 +1,6 @@
+{
+  "status": "provisional_before_reference_annotation",
+  "development": ["1THkHYIQ_bY_0", "HIu4lM4B8hA_1", "mKzCQKTHizw_0", "mKzCQKTHizw_1", "iMGR_0AG3a8_2_3"],
+  "test": ["gt1125_06", "NmlzoaDcOuI_1", "NmlzoaDcOuI_6"],
+  "note": "Repeated source prefixes remain together. Final independent-test claims require labels and frozen configuration."
+}

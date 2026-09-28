@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "person-vehicle-interaction"
+version = "0.1.0"
+description = "Reproducible person-vehicle event detection and annotated video export"
+requires-python = ">=3.11"
+dependencies = ["numpy", "scipy", "av", "opencv-python", "pillow", "pydantic>=2", "pyyaml", "ultralytics", "lap>=0.5.12", "transformers", "accelerate", "bitsandbytes"]
+
+[project.scripts]
+person-vehicle = "person_vehicle.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

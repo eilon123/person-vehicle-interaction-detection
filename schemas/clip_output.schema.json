@@ -1,0 +1,211 @@
+{
+  "$defs": {
+    "Event": {
+      "additionalProperties": false,
+      "properties": {
+        "event_id": {
+          "title": "Event Id",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "enter",
+            "exit",
+            "door_operation",
+            "load_unload",
+            "other_interaction"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "persons": {
+          "items": {
+            "$ref": "#/$defs/Person"
+          },
+          "maxItems": 1,
+          "minItems": 1,
+          "title": "Persons",
+          "type": "array"
+        },
+        "vehicle": {
+          "$ref": "#/$defs/Vehicle"
+        },
+        "spans": {
+          "items": {
+            "$ref": "#/$defs/Span"
+          },
+          "minItems": 1,
+          "title": "Spans",
+          "type": "array"
+        },
+        "truncated_start": {
+          "default": false,
+          "title": "Truncated Start",
+          "type": "boolean"
+        },
+        "truncated_end": {
+          "default": false,
+          "title": "Truncated End",
+          "type": "boolean"
+        },
+        "evidence_frames": {
+          "items": {
+            "type": "integer"
+          },
+          "minItems": 1,
+          "title": "Evidence Frames",
+          "type": "array"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group Id"
+        }
+      },
+      "required": [
+        "event_id",
+        "type",
+        "persons",
+        "vehicle",
+        "spans",
+        "evidence_frames"
+      ],
+      "title": "Event",
+      "type": "object"
+    },
+    "Person": {
+      "additionalProperties": false,
+      "properties": {
+        "person_id": {
+          "minLength": 1,
+          "title": "Person Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "person_id",
+        "description"
+      ],
+      "title": "Person",
+      "type": "object"
+    },
+    "Span": {
+      "additionalProperties": false,
+      "properties": {
+        "start_s": {
+          "minimum": 0,
+          "title": "Start S",
+          "type": "number"
+        },
+        "end_s": {
+          "exclusiveMinimum": 0,
+          "title": "End S",
+          "type": "number"
+        }
+      },
+      "required": [
+        "start_s",
+        "end_s"
+      ],
+      "title": "Span",
+      "type": "object"
+    },
+    "Vehicle": {
+      "additionalProperties": false,
+      "properties": {
+        "vehicle_id": {
+          "minLength": 1,
+          "title": "Vehicle Id",
+          "type": "string"
+        },
+        "description": {
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "vehicle_id",
+        "description"
+      ],
+      "title": "Vehicle",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "clip_id": {
+      "title": "Clip Id",
+      "type": "string"
+    },
+    "source_sha256": {
+      "title": "Source Sha256",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "error"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "duration_s": {
+      "minimum": 0,
+      "title": "Duration S",
+      "type": "number"
+    },
+    "frame_count": {
+      "minimum": 0,
+      "title": "Frame Count",
+      "type": "integer"
+    },
+    "interactions": {
+      "items": {
+        "$ref": "#/$defs/Event"
+      },
+      "title": "Interactions",
+      "type": "array"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
+    }
+  },
+  "required": [
+    "clip_id",
+    "source_sha256",
+    "status",
+    "duration_s",
+    "frame_count",
+    "interactions"
+  ],
+  "title": "ClipOutput",
+  "type": "object"
+}

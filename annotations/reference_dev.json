@@ -1,0 +1,18 @@
+{
+  "mKzCQKTHizw_1": {
+    "duration_s": 9.2092,
+    "interactions": [
+      {
+        "event_id": "ref001",
+        "type": "enter",
+        "persons": [{"person_id": "ref_person_1", "description": "Person with long dark hair, a light top, tan trousers, and light shoes"}],
+        "vehicle": {"vehicle_id": "ref_vehicle_1", "description": "Silver sedan with an open near-side front door"},
+        "spans": [{"start_s": 5.171833333333333, "end_s": 6.7067}],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [155, 174, 186, 201],
+        "group_id": null
+      }
+    ]
+  }
+}

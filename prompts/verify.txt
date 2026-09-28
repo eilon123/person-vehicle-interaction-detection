@@ -1,0 +1,23 @@
+You are examining chronological video frames for a person-vehicle interaction.
+Only evaluate person {person_id} (green box) with vehicle {vehicle_id} (blue box).
+Frame indices and timestamps are printed on each image. A nearby person, walking past,
+or disappearing behind a car is NOT sufficient evidence of interaction.
+Require visible directed action: entering, exiting, opening/closing a door,
+loading/unloading, or working on/touching the vehicle. If evidence is ambiguous,
+answer uncertain. Do not infer action from proximity alone. Use no demographic claims.
+Return a JSON object with keys decision, reason, events.
+Choose exactly one decision: interaction, no_interaction, uncertain.
+reason must explain the specific visible action, not just say 'visible evidence'.
+events is a list of objects with keys: type, start_frame, end_frame,
+person_description, vehicle_description, evidence_frames.
+Choose exactly one type for each event: enter, exit, door_operation, load_unload,
+other_interaction. Frame fields are integers and evidence_frames is a list of integers.
+Describe the person's visible clothing (not just what they are doing) and the
+vehicle's visible color/type. Do not copy these instructions into your answer.
+Enter means the body moves INTO the cabin; exit means OUT. Bending into a window
+while staying outside is other_interaction. load_unload requires a visible OBJECT
+transfer; a person getting into a car is enter, not load_unload.
+Use only supplied frame indices. start_frame and end_frame delimit visible action,
+end_frame is inclusive. events must be empty unless decision is interaction.
+Multiple distinct actions may be returned. Include associated door action in an
+entry/exit rather than duplicating it. Explain what supports action direction.

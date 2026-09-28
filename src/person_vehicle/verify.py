@@ -1,0 +1,188 @@
+import json
+from pathlib import Path
+from typing import Literal
+
+import numpy as np
+from PIL import Image, ImageDraw
+from pydantic import Field
+
+from .events import StrictModel
+from .io import fingerprint, read_json, write_json
+from .video import frames
+
+
+PROMPT = """You are examining chronological video frames for a person-vehicle interaction.
+Only evaluate person {person_id} (green box) with vehicle {vehicle_id} (blue box).
+Frame indices and timestamps are printed on each image. A nearby person, walking past,
+or disappearing behind a car is NOT sufficient evidence of interaction.
+Require visible directed action: entering, exiting, opening/closing a door,
+loading/unloading, or working on/touching the vehicle. If evidence is ambiguous,
+answer uncertain. Do not infer action from proximity alone. Use no demographic claims.
+Return a JSON object with keys decision, reason, events.
+Choose exactly one decision: interaction, no_interaction, uncertain.
+reason must explain the specific visible action, not just say 'visible evidence'.
+events is a list of objects with keys: type, start_frame, end_frame,
+person_description, vehicle_description, evidence_frames.
+Choose exactly one type for each event: enter, exit, door_operation, load_unload,
+other_interaction. Frame fields are integers and evidence_frames is a list of integers.
+Describe the person's visible clothing (not just what they are doing) and the
+vehicle's visible color/type. Do not copy these instructions into your answer.
+Enter means the body moves INTO the cabin; exit means OUT. Bending into a window
+while staying outside is other_interaction. load_unload requires a visible OBJECT
+transfer; a person getting into a car is enter, not load_unload.
+Use only supplied frame indices. start_frame and end_frame delimit visible action,
+end_frame is inclusive. events must be empty unless decision is interaction.
+Multiple distinct actions may be returned. Include associated door action in an
+entry/exit rather than duplicating it. Explain what supports action direction.
+"""
+
+
+class VerifiedEvent(StrictModel):
+    type: Literal["enter", "exit", "door_operation", "load_unload", "other_interaction"]
+    start_frame: int
+    end_frame: int
+    person_description: str = Field(min_length=1)
+    vehicle_description: str = Field(min_length=1)
+    evidence_frames: list[int] = Field(min_length=1)
+
+
+class Decision(StrictModel):
+    decision: Literal["interaction", "no_interaction", "uncertain"]
+    reason: str
+    events: list[VerifiedEvent]
+
+
+def parse_decision(text, allowed):
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+    result = Decision.model_validate_json(text)
+    if (result.decision == "interaction") != bool(result.events):
+        raise ValueError("Decision and events disagree")
+    for event in result.events:
+        if event.start_frame > event.end_frame:
+            raise ValueError("Reversed event bounds")
+        if not {event.start_frame, event.end_frame, *event.evidence_frames} <= set(allowed):
+            raise ValueError("Verifier invented a frame index")
+        if not all(event.start_frame <= frame <= event.end_frame for frame in event.evidence_frames):
+            raise ValueError("Evidence outside event")
+    return result.model_dump()
+
+
+class QwenVerifier:
+    def __init__(self, config):
+        import torch
+        from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration, BitsAndBytesConfig
+        self.config = config
+        self.processor = AutoProcessor.from_pretrained(config["vlm_model"],
+            revision=config["vlm_revision"], cache_dir=".cache/huggingface", max_pixels=config["max_pixels"], local_files_only=True)
+        quantized = config.get("load_in_4bit", False) and torch.cuda.is_available()
+        quantization = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16, bnb_4bit_use_double_quant=True) if quantized else None
+        self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(config["vlm_model"],
+            revision=config["vlm_revision"], cache_dir=".cache/huggingface",
+            dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+            device_map=config["vlm_device"], attn_implementation="sdpa", local_files_only=True,
+            quantization_config=quantization,
+            max_memory={0: "6GiB", "cpu": "20GiB"} if torch.cuda.is_available() else None)
+        self.model.eval()
+
+    def generate(self, images, prompt, timestamps=None):
+        import torch
+        from transformers.video_utils import VideoMetadata
+        messages = [{"role": "user", "content": [{"type": "video"}] +
+                     [{"type": "text", "text": prompt}]}]
+        text = self.processor.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        sampled_fps = (len(images) - 1) / (timestamps[-1] - timestamps[0]) if timestamps and len(images) > 1 else 2.0
+        metadata = VideoMetadata(total_num_frames=len(images), fps=sampled_fps, frames_indices=list(range(len(images))))
+        inputs = self.processor(text=[text], videos=[np.stack([np.asarray(image) for image in images])],
+            video_metadata=[metadata], do_sample_frames=False,
+            size={"shortest_edge": 128 * 28 * 28, "longest_edge": self.config["max_pixels"]},
+            padding=True, return_tensors="pt").to(self.model.device)
+        with torch.inference_mode():
+            output = self.model.generate(**inputs, do_sample=False, max_new_tokens=self.config["max_new_tokens"])
+        return self.processor.batch_decode(output[:, inputs.input_ids.shape[1]:], skip_special_tokens=True)[0]
+
+
+def sample_window(path, rows, candidate, count):
+    eligible = [row for row in rows if candidate["start_s"] <= row["timestamp_s"] < candidate["end_s"]
+                and row["scene"] == candidate["scene"]]
+    if not eligible:
+        return [], []
+    indices = sorted(set(np.linspace(0, len(eligible) - 1, min(count, len(eligible)), dtype=int)))
+    selected = {eligible[i]["frame_index"]: eligible[i] for i in indices}
+    pair_boxes = [obj["bbox"] for row in eligible for obj in row["objects"]
+                  if obj["id"] in (candidate["person_id"], candidate["vehicle_id"])]
+    # One fixed crop across time avoids artificial camera movement and keeps a
+    # disappearing person in view, with a margin for nearby scene context.
+    crop = None
+    if pair_boxes:
+        crop = [min(b[0] for b in pair_boxes), min(b[1] for b in pair_boxes),
+                max(b[2] for b in pair_boxes), max(b[3] for b in pair_boxes)]
+    images, frame_ids = [], []
+    for index, timestamp, frame in frames(path):
+        if index > max(selected):
+            break
+        if index not in selected:
+            continue
+        image = frame.to_image()
+        draw = ImageDraw.Draw(image)
+        for obj in selected[index]["objects"]:
+            if obj["id"] in (candidate["person_id"], candidate["vehicle_id"]):
+                color = "lime" if obj["id"] == candidate["person_id"] else "cyan"
+                draw.rectangle(obj["bbox"], outline=color, width=3)
+                draw.text((obj["bbox"][0], max(20, obj["bbox"][1] - 15)), obj["id"], fill=color)
+        if crop:
+            margin = max(crop[2] - crop[0], crop[3] - crop[1]) * 0.12
+            bounds = (max(0, int(crop[0] - margin)), max(0, int(crop[1] - margin)),
+                      min(image.width, int(crop[2] + margin)), min(image.height, int(crop[3] + margin)))
+            focused = image.crop(bounds)
+            focused.thumbnail((640, 480))
+            canvas = Image.new("RGB", (max(focused.width, 280), focused.height + 24), "black")
+            canvas.paste(focused, (0, 24))
+            ImageDraw.Draw(canvas).text((5, 5), f"frame {index} | {timestamp:.3f}s", fill="white")
+            image = canvas
+        images.append(image)
+        frame_ids.append(index)
+    return images, frame_ids
+
+
+def verify_candidates(path, rows, candidates, metadata, config, output, verifier_factory=QwenVerifier, resume=True):
+    events, reviews = [], []
+    verifier = None
+    cache = Path(output) / "verification" / Path(path).stem
+    for candidate in candidates:
+        print(f"{Path(path).stem}: verify {candidate['candidate_id']}/{len(candidates)}", flush=True)
+        images, indices = sample_window(path, rows, candidate, config["sample_frames"])
+        prompt = PROMPT.format(**candidate) + "\nAllowed frame indices in chronological order: " + str(indices)
+        signature = fingerprint({"candidate": candidate, "source": metadata["source_sha256"],
+                                 "config": config, "prompt": prompt, "indices": indices,
+                                 "tracks": [rows[i] for i in indices], "sampling_version": 4})
+        file = cache / f"{signature}.json"
+        if resume and file.exists():
+            decision = read_json(file)["decision"]
+        elif not any({candidate["person_id"], candidate["vehicle_id"]} <= {obj["id"] for obj in rows[i]["objects"]} for i in indices):
+            decision = {"decision": "uncertain", "reason": "No sampled frame shows both target track IDs", "events": []}
+        elif config["verifier"] == "review":
+            decision = {"decision": "uncertain", "reason": "Review-only mode: no action verifier run", "events": []}
+        else:
+            if verifier is None:
+                verifier = verifier_factory(config)
+            text = verifier.generate(images, prompt, [rows[i]["timestamp_s"] for i in indices])
+            try:
+                decision = parse_decision(text, indices)
+            except (ValueError, json.JSONDecodeError) as error:
+                # Invalid model output is exposed, never silently treated as a negative.
+                decision = {"decision": "uncertain", "reason": f"Invalid verifier response: {error}", "events": []}
+            write_json(file, {"candidate": candidate, "frame_ids": indices, "raw": text, "decision": decision})
+        reviews.append({**candidate, **decision})
+        for event in decision["events"]:
+            start, end = event["start_frame"], event["end_frame"]
+            events.append({"event_id": "pending", "type": event["type"],
+                "persons": [{"person_id": candidate["person_id"], "description": event["person_description"]}],
+                "vehicle": {"vehicle_id": candidate["vehicle_id"], "description": event["vehicle_description"]},
+                "spans": [{"start_s": rows[start]["timestamp_s"],
+                           "end_s": rows[end + 1]["timestamp_s"] if end + 1 < len(rows) else metadata["duration_s"]}],
+                "truncated_start": start == 0, "truncated_end": end == len(rows) - 1,
+                "evidence_frames": event["evidence_frames"], "group_id": None})
+    return events, reviews
