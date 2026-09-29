@@ -156,6 +156,11 @@ or remove its spans before reporting KPI results. This tool uses nominal frame
 timing for navigation; retain the pipeline's timestamp-aware decoder for final
 rendering and metric validation.
 
+Every evaluation report also includes `continuous_temporal_overlap`: a
+threshold-free duration metric. It unions all predicted and GT interaction spans
+within each clip, then reports overlap seconds, temporal precision/recall, F1,
+and temporal IoU. Parallel actions therefore do not double-count shared time.
+
 ```powershell
 python -m pytest -q
 python -m person_vehicle evaluate --pred outputs/final --reference annotations/reference_dev.json --mapping annotations/entity_mapping_dev.json --output outputs/final/development_metrics.json

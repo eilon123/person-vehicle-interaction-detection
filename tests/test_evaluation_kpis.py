@@ -1,4 +1,4 @@
-from person_vehicle.evaluate import evaluate, proposal_recall, passerby_false_positive_rate, rates
+from person_vehicle.evaluate import evaluate, proposal_recall, passerby_false_positive_rate, rates, temporal_occupancy
 
 
 def test_candidate_requires_pair_and_coverage():
@@ -33,3 +33,14 @@ def test_binary_timeline_can_ignore_participant_ids():
     result = evaluate(prediction, reference, ignore_participants=True)
     assert result["f1"] == 1
     assert result["participant_matching"] == "ignored"
+
+
+def test_threshold_free_temporal_occupancy_unions_parallel_events():
+    prediction = {"clip": {"interactions": [
+        {"spans": [{"start_s": 0, "end_s": 4}]}, {"spans": [{"start_s": 2, "end_s": 5}]}]}}
+    reference = {"clip": {"interactions": [{"spans": [{"start_s": 3, "end_s": 6}]}]}}
+    result = temporal_occupancy(prediction, reference)
+    assert result["predicted_s"] == 5
+    assert result["reference_s"] == 3
+    assert result["intersection_s"] == 2
+    assert result["temporal_iou"] == 1 / 3

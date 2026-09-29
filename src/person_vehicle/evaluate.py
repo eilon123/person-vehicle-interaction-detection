@@ -21,6 +21,48 @@ def temporal_iou(a, b):
     return intersection / total if total else 0.0
 
 
+def span_duration(spans):
+    return sum(end - start for start, end in union(spans))
+
+
+def span_intersection_duration(a, b):
+    """Duration of the overlap between two unions of half-open time spans."""
+    return sum(max(0, min(a1, b1) - max(a0, b0))
+               for a0, a1 in union(a) for b0, b1 in union(b))
+
+
+def temporal_occupancy(predictions, references):
+    """Threshold-free binary interaction-time overlap, including per-clip values.
+
+    Events are unioned before scoring, so parallel actions do not double-count
+    time. The aggregate is duration-weighted rather than a mean of clip scores.
+    """
+    totals = {"intersection_s": 0.0, "predicted_s": 0.0, "reference_s": 0.0}
+    per_clip = {}
+    for clip_id, truth_clip in references.items():
+        predicted_spans = [span for event in predictions[clip_id]["interactions"] for span in event["spans"]]
+        reference_spans = [span for event in truth_clip["interactions"] for span in event["spans"]]
+        predicted_s = span_duration(predicted_spans) if predicted_spans else 0.0
+        reference_s = span_duration(reference_spans) if reference_spans else 0.0
+        intersection_s = span_intersection_duration(predicted_spans, reference_spans) if predicted_spans and reference_spans else 0.0
+        per_clip[clip_id] = {"intersection_s": intersection_s, "predicted_s": predicted_s,
+                             "reference_s": reference_s}
+        for key, value in per_clip[clip_id].items():
+            totals[key] += value
+
+    def metrics(values):
+        intersection_s, predicted_s, reference_s = (values[key] for key in ("intersection_s", "predicted_s", "reference_s"))
+        union_s = predicted_s + reference_s - intersection_s
+        return {**values, "union_s": union_s,
+                "temporal_precision": intersection_s / predicted_s if predicted_s else None,
+                "temporal_recall": intersection_s / reference_s if reference_s else None,
+                "temporal_iou": intersection_s / union_s if union_s else None,
+                "temporal_f1": 2 * intersection_s / (predicted_s + reference_s)
+                if predicted_s + reference_s else None}
+
+    return {**metrics(totals), "per_clip": {clip_id: metrics(values) for clip_id, values in per_clip.items()}}
+
+
 def pair(event, mapping=None):
     mapping = mapping or {}
     person = event["persons"][0]["person_id"]

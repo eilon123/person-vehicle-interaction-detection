@@ -12,7 +12,7 @@ import yaml
 
 from .candidates import propose
 from .events import ClipOutput, merge_events
-from .evaluate import evaluate, proposal_recall, passerby_false_positive_rate
+from .evaluate import evaluate, proposal_recall, passerby_false_positive_rate, temporal_occupancy
 from .io import fingerprint, read_json, sha256, videos, write_json
 from .video import audit, probe
 
@@ -197,7 +197,8 @@ def main():
         results = [evaluate(predictions, references, mappings, threshold, typed, args.binary_timeline)
                    for threshold in [0.3, 0.5, 0.7] for typed in [False, True]]
         report = {"event_metrics": results,
-                  "evaluation_mode": "binary_timeline" if args.binary_timeline else "pair_correct_event"}
+                  "evaluation_mode": "binary_timeline" if args.binary_timeline else "pair_correct_event",
+                  "continuous_temporal_overlap": temporal_occupancy(predictions, references)}
         if args.candidates:
             candidates = {p.stem: read_json(p) for p in Path(args.candidates).glob("*.json")}
             report["proposal_recall"] = proposal_recall(candidates, references, mappings)
