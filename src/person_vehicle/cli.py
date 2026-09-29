@@ -135,6 +135,9 @@ def main():
     eval_parser.add_argument("--negatives", help="Annotated negative-encounter JSON for passerby FP rate")
     eval_parser.add_argument("--subset", default="test", choices=["test", "development", "all"])
     eval_parser.add_argument("--output", default="outputs/metrics.json")
+    annotate_parser = sub.add_parser("annotate", help="Open a local GUI to create confirmed and uncertain time labels")
+    annotate_parser.add_argument("--input", required=True, help="MP4 file or directory of MP4 files")
+    annotate_parser.add_argument("--output", default="annotations/manual", help="Directory for events.json and uncertain.json")
     sub.add_parser("schema")
     assets = sub.add_parser("download-assets")
     assets.add_argument("--detector-only", action="store_true")
@@ -196,6 +199,9 @@ def main():
             report["passerby_false_positive_rate"] = passerby_false_positive_rate(predictions, negatives, mappings)
         write_json(args.output, report)
         print(json.dumps(report, indent=2))
+    elif args.command == "annotate":
+        from .annotate import launch
+        launch(args.input, args.output)
     elif args.command == "schema":
         write_json("schemas/clip_output.schema.json", ClipOutput.model_json_schema())
     elif args.command == "download-assets":

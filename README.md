@@ -98,6 +98,32 @@ Extract the archive and open `index.html` to review it.
 
 ## Evaluation and tests
 
+### Create manual temporal reference labels
+
+For a small video collection, create the ground truth directly with the local
+annotator. It opens one clip at a time and lets you choose a start frame, move to
+an end frame, and add either a **confirmed** interval or an **uncertain** interval.
+Confirmed intervals are saved in the evaluator-compatible reference file;
+uncertain intervals are deliberately kept out of the primary KPI calculation.
+
+```powershell
+python -m person_vehicle annotate --input "C:\black rover\Assignment26\Videos" --output annotations/manual
+```
+
+The window saves after every interval and when it closes. Use a short visible
+description and stable within-clip IDs for the person and vehicle. The first
+time you evaluate, map those reference IDs to the prediction IDs (for example
+`p01` and `v01`) in a JSON mapping file. Then run:
+
+```powershell
+python -m person_vehicle evaluate --pred outputs/final --reference annotations/manual/events.json --mapping annotations/entity_mapping_manual.json --subset all --output outputs/final/manual_metrics.json
+```
+
+`annotations/manual/uncertain.json` is a review queue, not ground truth. Resolve
+or remove its spans before reporting KPI results. This tool uses nominal frame
+timing for navigation; retain the pipeline's timestamp-aware decoder for final
+rendering and metric validation.
+
 ```powershell
 python -m pytest -q
 python -m person_vehicle evaluate --pred outputs/final --reference annotations/reference_dev.json --mapping annotations/entity_mapping_dev.json --output outputs/final/development_metrics.json
