@@ -127,6 +127,13 @@ temporal-presence score and must not be reported as the pair-correct primary KPI
 python -m person_vehicle evaluate --pred outputs/final --reference annotations/manual/events.json --subset all --binary-timeline --output outputs/final/manual_binary_metrics.json
 ```
 
+Create a readable HTML dashboard with aggregate, per-clip, per-action, and
+action-confusion results. It uses the same matching rule as evaluation:
+
+```powershell
+python tools/kpi_dashboard.py --pred outputs/final --reference annotations/manual/events.json --binary-timeline --output outputs/final/kpi_dashboard.html
+```
+
 `annotations/manual/uncertain.json` is a review queue, not ground truth. Resolve
 or remove its spans before reporting KPI results. This tool uses nominal frame
 timing for navigation; retain the pipeline's timestamp-aware decoder for final
