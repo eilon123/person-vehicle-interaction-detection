@@ -14,8 +14,8 @@ from .video import frames, probe
 def draw_overlay(image, row, clip, reference=None):
     image = image.copy()
     height, width = image.shape[:2]
-    scale = max(0.35, min(0.55, width / 1800))
-    line_height = max(12, int(22 * scale / 0.45))
+    scale = max(0.46, min(0.70, width / 1450))
+    line_height = max(15, int(24 * scale / 0.52))
     active = active_events(clip["interactions"], row["timestamp_s"])
     reference_active = active_events(reference.get("interactions", []), row["timestamp_s"]) if reference else []
     participants = {e["vehicle"]["vehicle_id"] for e in active} | {
