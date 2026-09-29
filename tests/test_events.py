@@ -81,6 +81,17 @@ def test_temporal_ballot_majority_requires_consecutive_support():
     assert len(raw["votes"]) == 5
 
 
+def test_temporal_ballot_parser_accepts_singleton_array():
+    ballots = build_ballots(list(range(16)), count=5, width=6)
+    votes = [{"ballot_id": ballot["ballot_id"], "decision": "interaction", "type": "exit",
+              "evidence_frames": ballot["frame_indices"][:1], "reason": "test"}
+             for ballot in ballots]
+    payload = [{"person_description": "person", "vehicle_description": "car", "votes": votes}]
+    decision, _ = parse_and_aggregate_votes(__import__("json").dumps(payload), ballots, .6, 2)
+    assert decision["decision"] == "interaction"
+    assert decision["events"][0]["type"] == "exit"
+
+
 def test_eval_counts_and_undefined_rates():
     reference = {"clip": {"interactions": [event()], "duration_s": 60}}
     predictions = {"clip": {"status": "ok", "interactions": [event(), copy.deepcopy(event())]}}

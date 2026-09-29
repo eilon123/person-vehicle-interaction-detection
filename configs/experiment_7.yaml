@@ -19,6 +19,7 @@ sample_frames: 16
 sampling_strategy: transition_dense
 require_multi_frame_event: true
 voting_enabled: true
+vote_prefilter_review_dir: outputs_experiment_2/review
 vote_ballots: 5
 vote_ballot_frames: 6
 vote_min_fraction: 0.6

@@ -105,7 +105,12 @@ def parse_and_aggregate_votes(text, ballots, minimum_fraction=.6, minimum_consec
     text = text.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-    result = VotingDecision.model_validate_json(text).model_dump()
+    payload = json.loads(text)
+    # Qwen sometimes wraps the requested object in a singleton JSON array.
+    # Accept that harmless formatting variation while keeping schema validation strict.
+    if isinstance(payload, list) and len(payload) == 1:
+        payload = payload[0]
+    result = VotingDecision.model_validate(payload).model_dump()
     expected = {ballot["ballot_id"]: set(ballot["frame_indices"]) for ballot in ballots}
     if {vote["ballot_id"] for vote in result["votes"]} != set(expected):
         raise ValueError("Voting response does not contain exactly the requested ballots")
@@ -267,8 +272,20 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
     events, reviews = [], []
     verifier = None
     cache = Path(output) / "verification" / Path(path).stem
+    prefilter = {}
+    prefilter_dir = config.get("vote_prefilter_review_dir")
+    if config.get("voting_enabled") and prefilter_dir:
+        prefilter_path = Path(prefilter_dir) / f"{Path(path).stem}.json"
+        if prefilter_path.exists():
+            prefilter = {row["candidate_id"]: row for row in read_json(prefilter_path)}
     for candidate in candidates:
         print(f"{Path(path).stem}: verify {candidate['candidate_id']}/{len(candidates)}", flush=True)
+        prior = prefilter.get(candidate["candidate_id"])
+        if prior and prior["decision"] == "no_interaction":
+            reviews.append({**candidate, "decision": "no_interaction",
+                            "reason": "Voting prefilter retained the Experiment 2 no-interaction decision",
+                            "events": [], "voting": None, "postprocess_rejected_events": []})
+            continue
         images, indices = sample_window(path, rows, candidate, config["sample_frames"],
                                         config.get("sampling_strategy", "uniform"))
         ballots = build_ballots(indices, config.get("vote_ballots", 5), config.get("vote_ballot_frames", 6))
@@ -284,6 +301,18 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
             cached = read_json(file)
             decision = cached["decision"]
             voting_record = cached.get("voting")
+            # Recover cached model output produced before singleton-array responses
+            # were accepted. This avoids repeating expensive VLM inference.
+            if voting and voting_record is None and cached.get("raw"):
+                try:
+                    decision, voting_record = parse_and_aggregate_votes(
+                        cached["raw"], ballots, config.get("vote_min_fraction", .6),
+                        config.get("vote_min_consecutive", 2))
+                    cached["decision"] = decision
+                    cached["voting"] = voting_record
+                    write_json(file, cached)
+                except (ValueError, json.JSONDecodeError):
+                    pass
         elif not any({candidate["person_id"], candidate["vehicle_id"]} <= {obj["id"] for obj in rows[i]["objects"]} for i in indices):
             decision = {"decision": "uncertain", "reason": "No sampled frame shows both target track IDs", "events": []}
         elif config["verifier"] == "review":
