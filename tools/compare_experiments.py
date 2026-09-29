@@ -72,9 +72,10 @@ def main():
     new_config = read_json(Path(args.candidate) / "config.json")
     changed = [[key, old_config.get(key, "—"), new_config.get(key, "—")]
                for key in sorted(set(old_config) | set(new_config)) if old_config.get(key) != new_config.get(key)]
-    document = f"""<!doctype html><html><head><meta charset="utf-8"><title>Experiment comparison</title><style>
+    comparison_title = f"Experiment comparison — {args.baseline_name} vs {args.candidate_name}"
+    document = f"""<!doctype html><html><head><meta charset="utf-8"><title>{html.escape(comparison_title)}</title><style>
 body{{font-family:Segoe UI,Arial,sans-serif;margin:32px;background:#f7f8fa;color:#1c2530}}main{{max-width:1200px;margin:auto}}table{{border-collapse:collapse;width:100%;background:#fff}}th,td{{padding:9px 10px;border-bottom:1px solid #e4e8ed;text-align:right}}th:first-child,td:first-child{{text-align:left}}th{{background:#edf2f7}}section{{margin-top:30px}}.note{{color:#52606d}}
-</style></head><body><main><h1>{html.escape(args.baseline_name)} vs {html.escape(args.candidate_name)}</h1>
+</style></head><body><main><h1>{html.escape(comparison_title)}</h1>
 <p class="note">Binary event matching at temporal IoU ≥ 0.5; participant IDs ignored. Positive delta favors {html.escape(args.candidate_name)}.</p>
 <section><h2>Overall KPI comparison</h2>{table(["Metric", args.baseline_name, args.candidate_name, "Delta"], summary)}</section>
 <section><h2>Per-clip comparison</h2>{table(["Clip", "Exp. 1 F1", "Exp. 2 F1", "F1 delta", "Exp. 1 Time IoU", "Exp. 2 Time IoU", "IoU delta"], clips)}</section>
