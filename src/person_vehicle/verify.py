@@ -138,8 +138,11 @@ def parse_and_aggregate_votes(text, ballots, minimum_fraction=.6, minimum_consec
     evidence = sorted({frame for vote in winning for frame in vote["evidence_frames"]})
     if not evidence:
         return {"decision": "uncertain", "reason": "Winning votes supplied no evidence frames", "events": []}, result
-    window_frames = sorted({frame for ballot in ballots for frame in ballot["frame_indices"]})
-    event = {"type": action, "start_frame": window_frames[0], "end_frame": window_frames[-1],
+    winning_ids = {vote["ballot_id"] for vote in winning}
+    positive_window_frames = sorted({frame for ballot in ballots if ballot["ballot_id"] in winning_ids
+                                     for frame in ballot["frame_indices"]})
+    event = {"type": action, "start_frame": positive_window_frames[0],
+             "end_frame": positive_window_frames[-1],
              "person_description": result["person_description"],
              "vehicle_description": result["vehicle_description"], "evidence_frames": evidence}
     return {"decision": "interaction", "reason":
@@ -279,6 +282,13 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
         prefilter_path = Path(prefilter_dir) / f"{Path(path).stem}.json"
         if prefilter_path.exists():
             prefilter = {row["candidate_id"]: row for row in read_json(prefilter_path)}
+    reusable_votes = {}
+    reuse_dir = config.get("vote_reuse_verification_dir")
+    if config.get("voting_enabled") and reuse_dir:
+        source_cache = Path(reuse_dir) / Path(path).stem
+        for cached_file in source_cache.glob("*.json"):
+            cached_row = read_json(cached_file)
+            reusable_votes[cached_row["candidate"]["candidate_id"]] = cached_row
     for candidate in candidates:
         print(f"{Path(path).stem}: verify {candidate['candidate_id']}/{len(candidates)}", flush=True)
         prior = prefilter.get(candidate["candidate_id"])
@@ -314,6 +324,13 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
                     write_json(file, cached)
                 except (ValueError, json.JSONDecodeError):
                     pass
+        elif voting and candidate["candidate_id"] in reusable_votes:
+            cached = reusable_votes[candidate["candidate_id"]]
+            decision, voting_record = parse_and_aggregate_votes(
+                cached["raw"], ballots, config.get("vote_min_fraction", .6),
+                config.get("vote_min_consecutive", 2))
+            write_json(file, {"candidate": candidate, "frame_ids": indices, "ballots": ballots,
+                              "raw": cached["raw"], "decision": decision, "voting": voting_record})
         elif not any({candidate["person_id"], candidate["vehicle_id"]} <= {obj["id"] for obj in rows[i]["objects"]} for i in indices):
             decision = {"decision": "uncertain", "reason": "No sampled frame shows both target track IDs", "events": []}
         elif config["verifier"] == "review":
@@ -337,6 +354,12 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
         rejected = []
         for event in decision["events"]:
             start, end = event["start_frame"], event["end_frame"]
+            boundary_context = max(0, config.get("vote_boundary_context_s", 0))
+            if voting and boundary_context:
+                start_time = rows[start]["timestamp_s"] - boundary_context
+                end_time = rows[end]["timestamp_s"] + boundary_context
+                start = next((i for i, row in enumerate(rows) if row["timestamp_s"] >= start_time), 0)
+                end = max(i for i, row in enumerate(rows) if row["timestamp_s"] <= end_time)
             if config.get("require_multi_frame_event", False) and start == end and start not in (0, len(rows) - 1):
                 rejected.append({**event, "postprocess_reason": "single-frame event without clip-boundary truncation"})
                 continue
