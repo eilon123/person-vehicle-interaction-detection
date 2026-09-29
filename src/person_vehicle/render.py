@@ -11,85 +11,62 @@ from .io import sha256, write_json
 from .video import frames, probe
 
 
-def draw_overlay(image, row, clip):
+def draw_overlay(image, row, clip, reference=None):
     image = image.copy()
     height, width = image.shape[:2]
-    scale = max(0.45, min(2.0, width / 1000))
-    line_height = max(15, int(25 * scale / 0.65))
+    scale = max(0.35, min(0.55, width / 1800))
+    line_height = max(12, int(22 * scale / 0.45))
     active = active_events(clip["interactions"], row["timestamp_s"])
+    reference_active = active_events(reference.get("interactions", []), row["timestamp_s"]) if reference else []
     participants = {e["vehicle"]["vehicle_id"] for e in active} | {
         p["person_id"] for e in active for p in e["persons"]}
     centers = {}
     for obj in row["objects"]:
+        # Review output deliberately omits unrelated tracks: they create visual
+        # clutter and make it hard to assess the algorithm's asserted pair.
+        if obj["id"] not in participants:
+            continue
         x1, y1, x2, y2 = [int(x) for x in obj["bbox"]]
-        color = (90, 220, 90) if obj["id"] in participants else (160, 160, 160)
-        cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
+        color = (230, 70, 230)
+        cv2.rectangle(image, (x1, y1), (x2, y2), color, 1)
         label_width = cv2.getTextSize(obj["id"], cv2.FONT_HERSHEY_SIMPLEX, scale, 1)[0][0]
         label_x = max(0, min(x1, width - label_width - 3))
         cv2.putText(image, obj["id"], (label_x, max(line_height, y1 - 4)),
                     cv2.FONT_HERSHEY_SIMPLEX, scale, color, 1, cv2.LINE_AA)
         centers[obj["id"]] = ((x1 + x2) // 2, (y1 + y2) // 2)
-    lines = [f"{clip['clip_id']} | {row['timestamp_s']:.2f}s | frame {row['frame_index']}"]
-    if not active:
-        lines.append("No confirmed interaction")
+    lines = [f"{clip['clip_id']}  {row['timestamp_s']:.2f}s  f{row['frame_index']}"]
     for event in active:
         person, vehicle = event["persons"][0], event["vehicle"]
-        lines.append(f"{event['event_id']} {event['type'].upper()}")
-        lines.append(f"{person['person_id']} -> {vehicle['vehicle_id']}")
+        lines.append(f"ALG {event['type']}: {person['person_id']} -> {vehicle['vehicle_id']}")
         if person["person_id"] in centers and vehicle["vehicle_id"] in centers:
-            cv2.line(image, centers[person["person_id"]], centers[vehicle["vehicle_id"]], (0, 215, 255), 2)
-        # Wrap by rendered width rather than character count.
-        for description in (person["description"], vehicle["description"]):
-            current = ""
-            for word in description.split():
-                proposed = f"{current} {word}".strip()
-                if cv2.getTextSize(proposed, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)[0][0] > width - 16 and current:
-                    lines.append(current)
-                    current = word
-                else:
-                    current = proposed
-            if current:
-                lines.append(current)
-    # Headers and action labels also need wrapping on low-resolution footage.
-    wrapped = []
-    for line in lines:
-        current = ""
-        for word in line.split():
-            proposed = f"{current} {word}".strip()
-            if cv2.getTextSize(proposed, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)[0][0] > width - 16 and current:
-                wrapped.append(current)
-                current = word
-            else:
-                current = proposed
-        wrapped.append(current)
-    lines = wrapped
-    # Choose top/bottom based on overlap with tracked entities rather than
-    # covering the action by always placing the panel in the same corner.
-    max_lines = max(2, height // (3 * line_height))
-    shown = lines[:max_lines]
-    if len(lines) > max_lines:
-        shown[-1] = f"{len(active)} active; details in JSON"
-    panel_height = len(shown) * line_height + 8
-    def obstruction(y):
-        return sum(max(0, min(y + panel_height, obj["bbox"][3]) - max(y, obj["bbox"][1])) *
-                   max(0, obj["bbox"][2] - obj["bbox"][0]) for obj in row["objects"])
-    panel_y = min((0, max(0, height - 16 - panel_height)), key=obstruction)
-    image[panel_y:panel_y + panel_height] = (image[panel_y:panel_y + panel_height].astype(float) * 0.3).astype(np.uint8)
-    for i, text in enumerate(shown):
-        cv2.putText(image, text, (6, panel_y + (i + 1) * line_height), cv2.FONT_HERSHEY_SIMPLEX,
-                    scale, (255, 255, 255), 1, cv2.LINE_AA)
-    cv2.rectangle(image, (0, height - 12), (width, height), (35, 35, 35), -1)
+            cv2.line(image, centers[person["person_id"]], centers[vehicle["vehicle_id"]], (230, 70, 230), 1)
+    for event in reference_active:
+        person, vehicle = event["persons"][0], event["vehicle"]
+        lines.append(f"GT  {event['type']}: {person['person_id']} -> {vehicle['vehicle_id']}")
+    panel_height = len(lines) * line_height + 5
+    image[:panel_height] = (image[:panel_height].astype(float) * 0.32).astype(np.uint8)
+    for i, text in enumerate(lines):
+        color = (230, 70, 230) if text.startswith("ALG") else (70, 220, 255) if text.startswith("GT") else (230, 230, 230)
+        cv2.putText(image, text, (5, (i + 1) * line_height), cv2.FONT_HERSHEY_SIMPLEX,
+                    scale, color, 1, cv2.LINE_AA)
+    cv2.rectangle(image, (0, height - 10), (width, height), (35, 35, 35), -1)
     for event in clip["interactions"]:
         for span in event["spans"]:
             left = int(span["start_s"] / clip["duration_s"] * (width - 1))
             right = int(span["end_s"] / clip["duration_s"] * (width - 1))
-            cv2.rectangle(image, (left, height - 10), (right, height - 3), (90, 220, 90), -1)
+            cv2.rectangle(image, (left, height - 9), (right, height - 5), (230, 70, 230), -1)
+    if reference:
+        for event in reference.get("interactions", []):
+            for span in event["spans"]:
+                left = int(span["start_s"] / clip["duration_s"] * (width - 1))
+                right = int(span["end_s"] / clip["duration_s"] * (width - 1))
+                cv2.rectangle(image, (left, height - 4), (right, height - 1), (70, 220, 255), -1)
     cursor = int(row["timestamp_s"] / clip["duration_s"] * (width - 1))
-    cv2.line(image, (cursor, height - 13), (cursor, height - 1), (255, 255, 255), 2)
+    cv2.line(image, (cursor, height - 11), (cursor, height - 1), (255, 255, 255), 1)
     return image, [e["event_id"] for e in active]
 
 
-def render(path, rows, clip, destination):
+def render(path, rows, clip, destination, reference=None):
     ClipOutput.model_validate(clip)
     if clip["status"] != "ok":
         raise ValueError("Cannot render a failed inference as a successful clip")
@@ -105,7 +82,7 @@ def render(path, rows, clip, destination):
         for index, timestamp, frame in frames(path):
             if index >= len(rows) or rows[index]["frame_index"] != index or abs(rows[index]["timestamp_s"] - timestamp) > 1e-6:
                 raise ValueError("Track/frame alignment mismatch")
-            image, active = draw_overlay(frame.to_ndarray(format="bgr24"), rows[index], clip)
+            image, active = draw_overlay(frame.to_ndarray(format="bgr24"), rows[index], clip, reference)
             image = cv2.copyMakeBorder(image, 0, image.shape[0] % 2, 0, image.shape[1] % 2,
                                       cv2.BORDER_CONSTANT)
             if stream is None:

@@ -58,6 +58,15 @@ Regenerate videos without model inference:
 python -m person_vehicle render --input "C:\black rover\Assignment26\Videos" --events outputs/final/clips --tracks outputs/final/tracks --output outputs/final/annotated
 ```
 
+For a compact algorithm-versus-ground-truth review video, add the manual labels.
+Only participants in an active algorithm event receive boxes; small `ALG` and
+`GT` lines show the asserted action and person-to-vehicle pair. The bottom
+timeline uses magenta for algorithm events and yellow for GT spans.
+
+```powershell
+python -m person_vehicle render --input "C:\black rover\Assignment26\Videos" --events outputs/final/clips --tracks outputs/final/tracks --reference annotations/manual/events.json --output outputs/final/comparison
+```
+
 ## Outputs
 
 The deliverable run is under `outputs/final/`. Paths below are relative to the

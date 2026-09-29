@@ -126,6 +126,7 @@ def main():
     render_parser.add_argument("--events", default="outputs/clips")
     render_parser.add_argument("--tracks", default="outputs/tracks")
     render_parser.add_argument("--output", default="outputs/annotated")
+    render_parser.add_argument("--reference", help="Manual events.json to show compact GT comparison labels")
     eval_parser = sub.add_parser("evaluate")
     eval_parser.add_argument("--pred", required=True)
     eval_parser.add_argument("--reference", required=True)
@@ -176,10 +177,11 @@ def main():
             write_json(Path(args.output) / f"{path.stem}.json", result.model_dump())
     elif args.command == "render":
         from .render import render
+        reference = read_json(args.reference) if args.reference else {}
         for path in videos(args.input):
             render(path, load_rows(Path(args.tracks) / f"{path.stem}.jsonl"),
                    read_json(Path(args.events) / f"{path.stem}.json"),
-                   Path(args.output) / f"{path.stem}_annotated.mp4")
+                   Path(args.output) / f"{path.stem}_annotated.mp4", reference.get(path.stem))
     elif args.command == "evaluate":
         pred_dir = Path(args.pred)
         if (pred_dir / "clips").exists():
