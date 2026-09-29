@@ -68,9 +68,6 @@ def run(args):
             write_json(output / "candidates" / f"{path.stem}.json", candidates)
             events, reviews = verify_candidates(path, rows, candidates, metadata, config, output, verifier_factory,
                                                 resume=not args.no_resume)
-            from .transitions import infer_person_vehicle_transitions
-            transition_events = infer_person_vehicle_transitions(rows, candidates, metadata, config)
-            events.extend(transition_events)
             clip = ClipOutput(clip_id=path.stem, source_sha256=metadata["source_sha256"], status="ok",
                               duration_s=metadata["duration_s"], frame_count=metadata["frame_count"],
                               interactions=merge_events(events)).model_dump()
@@ -78,7 +75,6 @@ def run(args):
             write_json(output / "review" / f"{path.stem}.json", reviews)
             record = {"clip_id": path.stem, "status": "ok", "events": len(clip["interactions"]),
                       "uncertain_candidates": sum(r["decision"] == "uncertain" for r in reviews),
-                      "geometry_transition_events": len(transition_events),
                       "json": f"clips/{path.stem}.json", "inference_seconds": time.perf_counter() - start}
             if args.annotate:
                 render_start = time.perf_counter()
