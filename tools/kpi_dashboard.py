@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
 from collections import Counter, defaultdict
@@ -89,10 +90,41 @@ def algorithm_rows(config):
     ]
 
 
+def algorithm_summary(config, evaluation_mode, threshold):
+    """Detailed, config-derived description so each report documents its own run."""
+    value = lambda key, fallback="unknown": config.get(key, fallback)
+    verifier = value("verifier")
+    if verifier == "qwen":
+        verification = (f"For each candidate, {value('vlm_model')} (revision {value('vlm_revision')}) examines "
+                        f"{value('sample_frames')} chronologically selected frames. It decides whether an interaction "
+                        "occurred, its action type, its person–vehicle pair, and supported evidence frames. "
+                        f"Inference uses 4-bit loading: {value('load_in_4bit')}.")
+    else:
+        verification = f"Candidate windows are processed by the configured verifier: {verifier}."
+    mode = ("Participant IDs are ignored in the thresholded event metric; this evaluates temporal event presence."
+            if evaluation_mode == "binary_timeline" else
+            "A thresholded event match requires the predicted person and vehicle to match the reference pair.")
+    steps = [
+        ("Detection.", f"Every decoded frame is processed by {value('detector')} at image size {value('image_size')} "
+                         f"with detection confidence at least {value('detection_confidence')}."),
+        ("Tracking.", f"{value('tracker')} assigns stable local person and vehicle IDs within a clip. IDs are reset for each clip."),
+        ("Candidate generation.", f"The pipeline proposes person–vehicle windows from spatial proximity (near margin {value('near_margin')}), "
+                                  f"track appearance/disappearance (gap {value('candidate_gap_s')} s), and temporal context of {value('context_s')} s."),
+        ("Temporal verification.", verification),
+        ("Event assembly.", "Overlapping duplicate proposals for the same supported action and pair are merged; disjoint supported spans remain separate. "
+                            "The finalized event JSON is the source of truth for both metrics and video overlays."),
+        ("Evaluation.", f"Thresholded event precision, recall, and F1 use temporal IoU ≥ {threshold:.1f}. {mode} "
+                           "The separate Time overlap IoU has no threshold: it unions all predicted and reference interaction spans, "
+                           "so simultaneous actions do not double-count time."),
+    ]
+    return "".join(f"<li><strong>{html.escape(stage)}</strong> {html.escape(detail)}</li>" for stage, detail in steps)
+
+
 def dashboard(predictions, references, threshold, ignore_participants, config):
     total, per_clip, per_type, confusion = summarize(predictions, references, threshold, ignore_participants)
     overall = measures(total)
     occupancy = temporal_occupancy(predictions, references)
+    config_hash = hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()[:12] if config else "not available"
     clip_rows = []
     for clip_id, counts in sorted(per_clip.items(), key=lambda item: measures(item[1])["f1"] or 0):
         m = measures(counts)
@@ -114,8 +146,8 @@ body{{font-family:Segoe UI,Arial,sans-serif;margin:32px;background:#f7f8fa;color
 <h1>Person–vehicle KPI dashboard</h1><p class="note">{html.escape(mode)} · temporal IoU ≥ {threshold:.1f} · {len(references)} labelled clips</p>
 <div class="metrics"><div class="metric">Precision<b>{percent(overall['precision'])}</b></div><div class="metric">Recall<b>{percent(overall['recall'])}</b></div><div class="metric">F1<b>{percent(overall['f1'])}</b></div><div class="metric">TP / FP / FN<b>{overall['tp']} / {overall['fp']} / {overall['fn']}</b></div><div class="metric">Time overlap IoU<b>{percent(occupancy['temporal_iou'])}</b></div></div>
 <p class="note">Time overlap is threshold-free: all predicted and GT interaction spans are unioned before comparison, so concurrent actions do not double-count time. It is {occupancy['intersection_s']:.2f}s of overlap out of {occupancy['union_s']:.2f}s total interaction time.</p>
-<section><h2>Algorithm summary</h2><ol><li>Detect people and vehicles in each frame, then maintain within-clip identities with the tracker.</li><li>Propose person–vehicle time windows from proximity and track appearance/disappearance.</li><li>Use chronological visual evidence from each candidate window to verify an interaction, assign its action type, participants, and time span.</li><li>Merge duplicate supported proposals and export validated events; the comparison videos use those same event records and track geometry.</li></ol></section>
-<section><h2>Algorithm run</h2>{table(['Setting', 'Value'], algorithm_rows(config))}</section>
+<section><h2>Algorithm summary</h2><ol>{algorithm_summary(config, 'binary_timeline' if ignore_participants else 'pair_correct_event', threshold)}</ol></section>
+<section><h2>Algorithm run</h2><p class="note">Configuration fingerprint: <code>{config_hash}</code>. This section is generated from the config file associated with the selected prediction directory.</p>{table(['Setting', 'Value'], algorithm_rows(config))}</section>
 <section><h2>Results by clip</h2>{table(['Clip', 'TP', 'FP', 'FN', 'Precision', 'Recall', 'F1', 'Time IoU'], clip_rows, 'clip-table')}</section>
 <section><h2>Results by action type</h2>{table(['Action type', 'TP', 'FP', 'FN', 'Precision', 'Recall', 'F1'], type_rows)}</section>
 <section><h2>Action-type confusion</h2><p class="note">Rows are manual labels; columns are predictions. “Missed” has no matched prediction; “false alarm” has no matched manual label.</p>{table(['Manual / prediction'] + columns, confusion_rows)}</section>

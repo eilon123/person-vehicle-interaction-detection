@@ -155,7 +155,14 @@ The dashboard records the detector, tracker, verifier model/revision, temporal
 sampling, thresholds, and seed from `outputs/final/config.json`. Pass `--config`
 when the run configuration lives elsewhere; this makes result reports comparable
 across pipeline variants. It also includes a compact description of the pipeline
-used for the evaluated output.
+used for the evaluated output. The detailed algorithm description is generated
+from the same configuration, including a short configuration fingerprint. To
+keep reports separate for different algorithms, write each one beside its run:
+
+```powershell
+python tools/kpi_dashboard.py --pred outputs/variant_a --reference annotations/manual/events.json --binary-timeline --output outputs/variant_a/kpi_dashboard.html
+python tools/kpi_dashboard.py --pred outputs/variant_b --reference annotations/manual/events.json --binary-timeline --output outputs/variant_b/kpi_dashboard.html
+```
 
 `annotations/manual/uncertain.json` is a review queue, not ground truth. Resolve
 or remove its spans before reporting KPI results. This tool uses nominal frame
