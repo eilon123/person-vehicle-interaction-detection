@@ -53,3 +53,13 @@ def test_dashboard_temporal_metrics_can_be_filtered_by_action_type():
     exit_metric = tool.occupancy_for_type(predictions, references, "exit")
     assert enter["temporal_iou"] == 1 / 3
     assert exit_metric["temporal_iou"] == 1
+
+
+def test_diverse_sample_selects_distant_pretrained_features():
+    tool = load_tool("train_candidate_head")
+    items = [{"key": str(index)} for index in range(4)]
+    features = {"0": [1.0, 0.0], "1": [.95, .05], "2": [0.0, 1.0], "3": [-1.0, 0.0]}
+    selected = tool.diverse_sample(items, features, 3)
+    keys = {item["key"] for item in selected}
+    assert "3" in keys
+    assert len(keys) == 3

@@ -131,6 +131,25 @@ def train_fold(train_x, train_y, test_x, seed=42):
     return test_p.numpy(), best[1]
 
 
+def diverse_sample(items, features, count):
+    """Deterministic farthest-point sampling in normalized pretrained-feature space."""
+    if len(items) <= count:
+        return list(items)
+    matrix = np.stack([features[item["key"]] for item in items]).astype(np.float64)
+    matrix -= matrix.mean(0, keepdims=True)
+    matrix /= np.linalg.norm(matrix, axis=1, keepdims=True).clip(min=1e-9)
+    center = matrix.mean(0)
+    selected = [int(np.argmax(np.linalg.norm(matrix - center, axis=1)))]
+    minimum_distance = np.linalg.norm(matrix - matrix[selected[0]], axis=1)
+    while len(selected) < count:
+        minimum_distance[selected] = -1
+        next_index = int(np.argmax(minimum_distance))
+        selected.append(next_index)
+        minimum_distance = np.minimum(minimum_distance,
+                                      np.linalg.norm(matrix - matrix[next_index], axis=1))
+    return [items[index] for index in selected]
+
+
 def main():
     parser = argparse.ArgumentParser(description="Train a frozen-ResNet candidate filter with leave-one-video-out CV")
     parser.add_argument("--input", required=True)
@@ -138,8 +157,9 @@ def main():
     parser.add_argument("--reference", required=True)
     parser.add_argument("--uncertain")
     parser.add_argument("--output", required=True)
-    parser.add_argument("--protocol", choices=("loocv", "small_sample_all"), default="loocv")
+    parser.add_argument("--protocol", choices=("loocv", "small_sample_all", "diverse_sample_all"), default="loocv")
     parser.add_argument("--max-train-examples", type=int, default=20)
+    parser.add_argument("--experiment-name", default="experiment_5")
     args = parser.parse_args()
     base, output = Path(args.base), Path(args.output)
     if output.exists():
@@ -180,7 +200,10 @@ def main():
             if len(items) <= count:
                 return items
             return [items[index] for index in np.linspace(0, len(items) - 1, count, dtype=int)]
-        train = spread(positives, per_class) + spread(negatives, per_class)
+        if args.protocol == "diverse_sample_all":
+            train = diverse_sample(positives, features, per_class) + diverse_sample(negatives, features, per_class)
+        else:
+            train = spread(positives, per_class) + spread(negatives, per_class)
         train_x = torch.tensor(np.stack([features[e["key"]] for e in train]), dtype=torch.float32)
         train_y = torch.tensor([e["label"] for e in train], dtype=torch.float32)
         all_x = torch.tensor(np.stack([features[e["key"]] for e in examples]), dtype=torch.float32)
@@ -190,15 +213,17 @@ def main():
             scores[example["key"]] = {"probability": float(probability), "threshold": threshold,
                                       "accepted": bool(probability >= threshold), "label": example["label"],
                                       "used_for_training": example["key"] in training_keys}
-        fold_info.append({"protocol": "small_sample_all", "train_examples": len(train),
+        fold_info.append({"protocol": args.protocol, "train_examples": len(train),
                           "train_positive": sum(e["label"] for e in train), "evaluated_examples": len(examples),
                           "threshold": threshold, "training_keys": sorted(training_keys)})
 
     shutil.copytree(base, output, ignore=shutil.ignore_patterns("comparison", "annotated", "annotated_vs_gt",
                                                                 "*.html", "*metrics.json"))
     config = read_json(output / "config.json")
-    protocol_name = "leave_one_video_out" if args.protocol == "loocv" else "small_sample_all_videos_in_sample_assisted"
-    config.update({"experiment_name": "experiment_5",
+    protocol_name = ("leave_one_video_out" if args.protocol == "loocv" else
+                     "diverse_small_sample_all_videos_in_sample_assisted" if args.protocol == "diverse_sample_all" else
+                     "small_sample_all_videos_in_sample_assisted")
+    config.update({"experiment_name": args.experiment_name,
                    "experiment_change": f"Frozen ResNet-18 candidate filter over Experiment 2 VLM events ({protocol_name})",
                    "candidate_filter": "frozen_resnet18_linear_head", "training_protocol": protocol_name,
                    "training_sample_count": sum(row["train_examples"] for row in fold_info)})
