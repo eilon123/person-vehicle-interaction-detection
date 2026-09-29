@@ -1,5 +1,5 @@
-experiment_name: experiment_3
-experiment_change: detect exit when a person appears inside a persistent vehicle and grows; detect entry when a person moves into a vehicle and disappears
+experiment_name: experiment_4
+experiment_change: VLM plus geometry correction; relative-size trends refine action type and boundaries, standalone transitions require strong evidence
 seed: 42
 detector: models/yolo11s.pt
 device: '0'
@@ -22,9 +22,13 @@ max_pixels: 200704
 max_new_tokens: 384
 load_in_4bit: true
 geometry_transitions: true
-geometry_fusion_mode: add
-transition_min_observations: 4
+geometry_fusion_mode: correct_then_add
+geometry_correctable_types: [other_interaction, door_operation, enter, exit]
+geometry_correction_max_gap_s: 0.5
+geometry_allow_standalone: true
+transition_min_observations: 5
 transition_distance_change: 0.18
-transition_size_ratio: 1.25
+transition_size_ratio: 1.5
+transition_min_trend_fraction: 0.7
+transition_min_duration_s: 0.5
 transition_vehicle_persistence_s: 0.35
-transition_event_context_s: 1.5
