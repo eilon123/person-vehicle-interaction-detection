@@ -138,7 +138,8 @@ def parse_and_aggregate_votes(text, ballots, minimum_fraction=.6, minimum_consec
     evidence = sorted({frame for vote in winning for frame in vote["evidence_frames"]})
     if not evidence:
         return {"decision": "uncertain", "reason": "Winning votes supplied no evidence frames", "events": []}, result
-    event = {"type": action, "start_frame": evidence[0], "end_frame": evidence[-1],
+    window_frames = sorted({frame for ballot in ballots for frame in ballot["frame_indices"]})
+    event = {"type": action, "start_frame": window_frames[0], "end_frame": window_frames[-1],
              "person_description": result["person_description"],
              "vehicle_description": result["vehicle_description"], "evidence_frames": evidence}
     return {"decision": "interaction", "reason":
@@ -303,7 +304,7 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
             voting_record = cached.get("voting")
             # Recover cached model output produced before singleton-array responses
             # were accepted. This avoids repeating expensive VLM inference.
-            if voting and voting_record is None and cached.get("raw"):
+            if voting and cached.get("raw"):
                 try:
                     decision, voting_record = parse_and_aggregate_votes(
                         cached["raw"], ballots, config.get("vote_min_fraction", .6),

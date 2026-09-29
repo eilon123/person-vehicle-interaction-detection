@@ -78,6 +78,8 @@ def test_temporal_ballot_majority_requires_consecutive_support():
     decision, raw = parse_and_aggregate_votes(text, ballots, .6, 2)
     assert decision["decision"] == "interaction"
     assert decision["events"][0]["type"] == "enter"
+    assert decision["events"][0]["start_frame"] == 0
+    assert decision["events"][0]["end_frame"] == 15
     assert len(raw["votes"]) == 5
 
 
