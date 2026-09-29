@@ -47,6 +47,20 @@ Before returning interaction, identify at least two chronological observations
 that support the action. Otherwise return uncertain or no_interaction.
 """
 
+VOTING_PROMPT = """You are examining chronological video frames for person {person_id} (green box)
+and vehicle {vehicle_id} (blue box). Evaluate each listed temporal ballot independently.
+A ballot supports interaction only when it shows directed action: entering, exiting, opening or
+closing a door, loading or unloading an object, or touching/working on the vehicle. Proximity,
+walking past, or disappearance behind a vehicle is not sufficient. Enter is outside-to-cabin;
+exit is cabin-to-outside. Return one JSON object with person_description, vehicle_description,
+and votes. votes must contain exactly one object per ballot with keys ballot_id, decision, type,
+evidence_frames, reason. decision is interaction, no_interaction, or uncertain. type is one of
+enter, exit, door_operation, load_unload, other_interaction when decision is interaction, and
+null otherwise. Use only frame indices belonging to that ballot. Do not let one ballot's answer
+determine another ballot. Ballots:
+{ballots}
+"""
+
 
 class VerifiedEvent(StrictModel):
     type: Literal["enter", "exit", "door_operation", "load_unload", "other_interaction"]
@@ -61,6 +75,70 @@ class Decision(StrictModel):
     decision: Literal["interaction", "no_interaction", "uncertain"]
     reason: str
     events: list[VerifiedEvent]
+
+
+class BallotVote(StrictModel):
+    ballot_id: int
+    decision: Literal["interaction", "no_interaction", "uncertain"]
+    type: Literal["enter", "exit", "door_operation", "load_unload", "other_interaction"] | None
+    evidence_frames: list[int]
+    reason: str
+
+
+class VotingDecision(StrictModel):
+    person_description: str = Field(min_length=1)
+    vehicle_description: str = Field(min_length=1)
+    votes: list[BallotVote]
+
+
+def build_ballots(indices, count=5, width=6):
+    """Create overlapping chronological ballots over sampled frame indices."""
+    if not indices:
+        return []
+    width = min(width, len(indices))
+    starts = np.linspace(0, len(indices) - width, min(count, len(indices) - width + 1), dtype=int)
+    return [{"ballot_id": number, "frame_indices": indices[start:start + width]}
+            for number, start in enumerate(sorted(set(starts)), 1)]
+
+
+def parse_and_aggregate_votes(text, ballots, minimum_fraction=.6, minimum_consecutive=2):
+    text = text.strip()
+    if text.startswith("```"):
+        text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+    result = VotingDecision.model_validate_json(text).model_dump()
+    expected = {ballot["ballot_id"]: set(ballot["frame_indices"]) for ballot in ballots}
+    if {vote["ballot_id"] for vote in result["votes"]} != set(expected):
+        raise ValueError("Voting response does not contain exactly the requested ballots")
+    for vote in result["votes"]:
+        if not set(vote["evidence_frames"]) <= expected[vote["ballot_id"]]:
+            raise ValueError("Vote evidence is outside its ballot")
+        if (vote["decision"] == "interaction") != (vote["type"] is not None):
+            raise ValueError("Vote action type disagrees with decision")
+    positive = [vote for vote in result["votes"] if vote["decision"] == "interaction"]
+    fraction = len(positive) / len(ballots)
+    positive_ids = {vote["ballot_id"] for vote in positive}
+    longest = current = 0
+    for ballot_id in sorted(expected):
+        current = current + 1 if ballot_id in positive_ids else 0
+        longest = max(longest, current)
+    if fraction < minimum_fraction or longest < minimum_consecutive:
+        return {"decision": "no_interaction", "reason":
+                f"Voting rejected: {len(positive)}/{len(ballots)} positive ballots; longest run {longest}",
+                "events": []}, result
+    counts = {}
+    for vote in positive:
+        counts[vote["type"]] = counts.get(vote["type"], 0) + 1
+    action = max(sorted(counts), key=lambda label: counts[label])
+    winning = [vote for vote in positive if vote["type"] == action]
+    evidence = sorted({frame for vote in winning for frame in vote["evidence_frames"]})
+    if not evidence:
+        return {"decision": "uncertain", "reason": "Winning votes supplied no evidence frames", "events": []}, result
+    event = {"type": action, "start_frame": evidence[0], "end_frame": evidence[-1],
+             "person_description": result["person_description"],
+             "vehicle_description": result["vehicle_description"], "evidence_frames": evidence}
+    return {"decision": "interaction", "reason":
+            f"Voting accepted: {len(positive)}/{len(ballots)} positive ballots; {counts[action]} support {action}",
+            "events": [event]}, result
 
 
 def parse_decision(text, allowed):
@@ -193,13 +271,19 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
         print(f"{Path(path).stem}: verify {candidate['candidate_id']}/{len(candidates)}", flush=True)
         images, indices = sample_window(path, rows, candidate, config["sample_frames"],
                                         config.get("sampling_strategy", "uniform"))
-        prompt = PROMPT.format(**candidate) + "\nAllowed frame indices in chronological order: " + str(indices)
+        ballots = build_ballots(indices, config.get("vote_ballots", 5), config.get("vote_ballot_frames", 6))
+        voting = config.get("voting_enabled", False)
+        prompt = (VOTING_PROMPT.format(**candidate, ballots=json.dumps(ballots)) if voting else
+                  PROMPT.format(**candidate) + "\nAllowed frame indices in chronological order: " + str(indices))
         signature = fingerprint({"candidate": candidate, "source": metadata["source_sha256"],
                                  "config": config, "prompt": prompt, "indices": indices,
-                                 "tracks": [rows[i] for i in indices], "sampling_version": 4})
+                                 "tracks": [rows[i] for i in indices], "sampling_version": 5})
         file = cache / f"{signature}.json"
+        voting_record = None
         if resume and file.exists():
-            decision = read_json(file)["decision"]
+            cached = read_json(file)
+            decision = cached["decision"]
+            voting_record = cached.get("voting")
         elif not any({candidate["person_id"], candidate["vehicle_id"]} <= {obj["id"] for obj in rows[i]["objects"]} for i in indices):
             decision = {"decision": "uncertain", "reason": "No sampled frame shows both target track IDs", "events": []}
         elif config["verifier"] == "review":
@@ -209,11 +293,17 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
                 verifier = verifier_factory(config)
             text = verifier.generate(images, prompt, [rows[i]["timestamp_s"] for i in indices])
             try:
-                decision = parse_decision(text, indices)
+                if voting:
+                    decision, voting_record = parse_and_aggregate_votes(
+                        text, ballots, config.get("vote_min_fraction", .6),
+                        config.get("vote_min_consecutive", 2))
+                else:
+                    decision = parse_decision(text, indices)
             except (ValueError, json.JSONDecodeError) as error:
                 # Invalid model output is exposed, never silently treated as a negative.
                 decision = {"decision": "uncertain", "reason": f"Invalid verifier response: {error}", "events": []}
-            write_json(file, {"candidate": candidate, "frame_ids": indices, "raw": text, "decision": decision})
+            write_json(file, {"candidate": candidate, "frame_ids": indices, "ballots": ballots if voting else None,
+                              "raw": text, "decision": decision, "voting": voting_record})
         rejected = []
         for event in decision["events"]:
             start, end = event["start_frame"], event["end_frame"]
@@ -227,5 +317,6 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
                            "end_s": rows[end + 1]["timestamp_s"] if end + 1 < len(rows) else metadata["duration_s"]}],
                 "truncated_start": start == 0, "truncated_end": end == len(rows) - 1,
                 "evidence_frames": event["evidence_frames"], "group_id": None})
-        reviews.append({**candidate, **decision, "postprocess_rejected_events": rejected})
+        reviews.append({**candidate, **decision, "voting": voting_record,
+                        "postprocess_rejected_events": rejected})
     return events, reviews

@@ -4,7 +4,7 @@ import pytest
 
 from person_vehicle.events import ClipOutput, active_events, merge_events
 from person_vehicle.evaluate import evaluate, match_events, temporal_iou
-from person_vehicle.verify import parse_decision, select_sample_rows
+from person_vehicle.verify import build_ballots, parse_and_aggregate_votes, parse_decision, select_sample_rows
 
 
 def event(start=1, end=3, person="p1", action="enter"):
@@ -64,6 +64,21 @@ def test_transition_dense_sampling_keeps_context_and_visibility_change():
     indices = [row["frame_index"] for row in selected]
     assert indices[0] == 0 and indices[-1] == 9
     assert 4 in indices and 7 in indices
+
+
+def test_temporal_ballot_majority_requires_consecutive_support():
+    ballots = build_ballots(list(range(16)), count=5, width=6)
+    votes = []
+    for ballot in ballots:
+        positive = ballot["ballot_id"] in (2, 3, 4)
+        votes.append({"ballot_id": ballot["ballot_id"], "decision": "interaction" if positive else "no_interaction",
+                      "type": "enter" if positive else None,
+                      "evidence_frames": ballot["frame_indices"][:2] if positive else [], "reason": "test"})
+    text = __import__("json").dumps({"person_description": "dark coat", "vehicle_description": "white car", "votes": votes})
+    decision, raw = parse_and_aggregate_votes(text, ballots, .6, 2)
+    assert decision["decision"] == "interaction"
+    assert decision["events"][0]["type"] == "enter"
+    assert len(raw["votes"]) == 5
 
 
 def test_eval_counts_and_undefined_rates():
