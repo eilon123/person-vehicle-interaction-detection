@@ -154,7 +154,8 @@ python tools/kpi_dashboard.py --pred outputs/final --reference annotations/manua
 The dashboard records the detector, tracker, verifier model/revision, temporal
 sampling, thresholds, and seed from `outputs/final/config.json`. Pass `--config`
 when the run configuration lives elsewhere; this makes result reports comparable
-across pipeline variants.
+across pipeline variants. It also includes a compact description of the pipeline
+used for the evaluated output.
 
 `annotations/manual/uncertain.json` is a review queue, not ground truth. Resolve
 or remove its spans before reporting KPI results. This tool uses nominal frame
