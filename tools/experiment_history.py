@@ -56,7 +56,8 @@ def build(root: Path):
         delta = "—" if previous_f1 is None else f"{100 * (event['f1'] - previous_f1):+.1f} pp"
         previous_f1 = event["f1"]
         overview.append([name, f"{event['tp']} / {event['fp']} / {event['fn']}", pct(event["precision"]),
-                         pct(event["recall"]), pct(event["f1"]), delta, pct(timing["temporal_iou"])])
+                         pct(event["recall"]), pct(event["f1"]), delta, f"{timing.get('intersection_s', 0):.2f}",
+                         pct(timing.get("temporal_recall")), pct(timing["temporal_iou"])])
         config_rows = [[key, value] for key, value in config.items()]
         clip_rows = [[clip, values["tp"], values["fp"], values["fn"], pct(values["f1"]),
                       pct(timing.get("per_clip", {}).get(clip, {}).get("temporal_iou"))]
@@ -94,8 +95,8 @@ def build(root: Path):
 <title>All person–vehicle experiments — comparison report</title><style>
 body{{font-family:Segoe UI,Arial,sans-serif;margin:32px;background:#f7f8fa;color:#1c2530}}main{{max-width:1250px;margin:auto}}table{{border-collapse:collapse;width:100%;background:#fff}}th,td{{padding:9px 10px;border-bottom:1px solid #e4e8ed;text-align:right}}th:first-child,td:first-child{{text-align:left}}th{{background:#edf2f7}}section{{margin-top:32px}}a{{margin-right:18px}}
 </style></head><body><main><h1>All experiments — person–vehicle comparison</h1>
-<p>Binary temporal event matching at temporal IoU ≥ 0.5; participant IDs ignored. F1 delta is relative to the preceding experiment.</p>
-{table(['Experiment','TP / FP / FN','Precision','Recall','F1','F1 change','Time IoU'], overview)}
+<p>Binary temporal event matching at temporal IoU ≥ 0.5; participant IDs ignored. Class-agnostic temporal KPIs compare predicted interaction time with GT time without considering the action label.</p>
+{table(['Experiment','TP / FP / FN','Precision','Recall','F1','F1 change','Overlap s','GT time covered','Class-agnostic Time IoU'], overview)}
 {''.join(details)}</main></body></html>"""
 
 
