@@ -68,9 +68,9 @@ def run(args):
             write_json(output / "candidates" / f"{path.stem}.json", candidates)
             events, reviews = verify_candidates(path, rows, candidates, metadata, config, output, verifier_factory,
                                                 resume=not args.no_resume)
-            from .transitions import infer_person_vehicle_transitions, fuse_transition_events
+            from .transitions import infer_person_vehicle_transitions
             transition_events = infer_person_vehicle_transitions(rows, candidates, metadata, config)
-            events = fuse_transition_events(events, transition_events, config)
+            events.extend(transition_events)
             clip = ClipOutput(clip_id=path.stem, source_sha256=metadata["source_sha256"], status="ok",
                               duration_s=metadata["duration_s"], frame_count=metadata["frame_count"],
                               interactions=merge_events(events)).model_dump()

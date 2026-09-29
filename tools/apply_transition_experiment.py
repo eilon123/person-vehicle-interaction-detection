@@ -9,7 +9,7 @@ import yaml
 
 from person_vehicle.events import ClipOutput, merge_events
 from person_vehicle.io import fingerprint, read_json, sha256, write_json
-from person_vehicle.transitions import infer_person_vehicle_transitions, fuse_transition_events
+from person_vehicle.transitions import infer_person_vehicle_transitions
 
 
 def rows(path):
@@ -44,7 +44,7 @@ def main():
         metadata = read_json(output / "audit" / f"{clip_id}.json")
         transition_events = infer_person_vehicle_transitions(
             rows(output / "tracks" / f"{clip_id}.jsonl"), candidates, metadata, config)
-        clip["interactions"] = merge_events(fuse_transition_events(clip["interactions"], transition_events, config))
+        clip["interactions"] = merge_events(clip["interactions"] + transition_events)
         validated = ClipOutput.model_validate(clip).model_dump()
         write_json(clip_path, validated)
         record = records[clip_id]

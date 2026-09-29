@@ -22,7 +22,6 @@ max_pixels: 200704
 max_new_tokens: 384
 load_in_4bit: true
 geometry_transitions: true
-geometry_fusion_mode: add
 transition_min_observations: 4
 transition_distance_change: 0.18
 transition_size_ratio: 1.25
