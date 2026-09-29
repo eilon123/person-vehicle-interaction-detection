@@ -110,6 +110,14 @@ uncertain intervals are deliberately kept out of the primary KPI calculation.
 python -m person_vehicle annotate --input "C:\black rover\Assignment26\Videos" --output annotations/manual
 ```
 
+To annotate while reviewing the algorithm's active predictions, pass its output
+directory. The viewer draws only boxes for participants in an active predicted
+event, with small `ALG` and `GT` lines at the top; it hides unrelated tracks.
+
+```powershell
+python -m person_vehicle annotate --input "C:\black rover\Assignment26\Videos" --output annotations/manual --pred outputs/final
+```
+
 The window saves after every interval and when it closes. Use a short visible
 description and stable within-clip IDs for the person and vehicle. The first
 time you evaluate, map those reference IDs to the prediction IDs (for example

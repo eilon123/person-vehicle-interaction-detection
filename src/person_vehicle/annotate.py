@@ -42,7 +42,8 @@ def make_event(number: int, start_s: float, end_s: float, start_frame: int, end_
 
 
 class AnnotationApp:
-    def __init__(self, input_path: str | Path, output_dir: str | Path):
+    def __init__(self, input_path: str | Path, output_dir: str | Path,
+                 prediction_dir: str | Path | None = None, track_dir: str | Path | None = None):
         import tkinter as tk
         from tkinter import messagebox, ttk
         from PIL import Image, ImageTk
@@ -58,6 +59,14 @@ class AnnotationApp:
         self.uncertain_path = self.output_dir / "uncertain.json"
         self.reference = self._load(self.reference_path)
         self.uncertain = self._load(self.uncertain_path)
+        prediction_dir = Path(prediction_dir) if prediction_dir else None
+        if prediction_dir and (prediction_dir / "clips").exists():
+            prediction_dir = prediction_dir / "clips"
+        self.predictions = self._load_clip_outputs(prediction_dir)
+        self.track_dir = Path(track_dir) if track_dir else None
+        if self.track_dir is None and prediction_dir and prediction_dir.name == "clips":
+            self.track_dir = prediction_dir.parent / "tracks"
+        self.track_rows = []
         self.clip_index = 0
         self.cap = None
         self.metadata = None
@@ -80,6 +89,14 @@ class AnnotationApp:
         if not isinstance(value, dict):
             raise ValueError(f"{path} must contain a JSON object")
         return value
+
+    @staticmethod
+    def _load_clip_outputs(path: Path | None) -> dict:
+        if path is None:
+            return {}
+        if not path.exists():
+            raise ValueError(f"Prediction directory does not exist: {path}")
+        return {item.stem: json.loads(item.read_text(encoding="utf-8")) for item in path.glob("*.json")}
 
     def _build(self):
         tk, ttk = self.tk, self.ttk
@@ -152,12 +169,21 @@ class AnnotationApp:
         if not self.cap.isOpened():
             raise RuntimeError(f"Could not open {path}")
         self.current_frame = 0
+        self.track_rows = self._load_tracks(self.clip_id)
         self.start = None
         self.slider.configure(to=max(0, self.metadata["frame_count"] - 1))
         self.slider.set(0)
         self.video_label.configure(text=f"{index + 1}/{len(self.paths)}: {path.name}")
         self.show_frame(0)
         self.refresh_items()
+
+    def _load_tracks(self, clip_id: str) -> list[dict]:
+        if self.track_dir is None:
+            return []
+        path = self.track_dir / f"{clip_id}.jsonl"
+        if not path.exists():
+            return []
+        return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
 
     @property
     def clip_id(self) -> str:
@@ -177,6 +203,7 @@ class AnnotationApp:
         if not ok:
             return
         self.current_frame = frame
+        image = self.draw_annotation_overlay(image)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         height, width = image.shape[:2]
         scale = min(880 / width, 480 / height, 1)
@@ -187,6 +214,41 @@ class AnnotationApp:
         self.image_label.image = photo
         self.slider.set(frame)
         self.position_label.configure(text=f"Frame {frame} / {self.metadata['frame_count'] - 1}    |    {self.frame_time(frame):.3f} s")
+
+    @staticmethod
+    def _active(events: list[dict], timestamp_s: float) -> list[dict]:
+        return [event for event in events if any(span["start_s"] <= timestamp_s < span["end_s"]
+                                                  for span in event["spans"])]
+
+    def draw_annotation_overlay(self, image):
+        """Draw only active predicted participants and concise prediction/GT text."""
+        timestamp_s = self.frame_time(self.current_frame)
+        predicted = self._active(self.predictions.get(self.clip_id, {}).get("interactions", []), timestamp_s)
+        ground_truth = self._active(self.reference.get(self.clip_id, {}).get("interactions", []), timestamp_s)
+        if not predicted and not ground_truth:
+            return image
+        height, width = image.shape[:2]
+        participant_ids = {event["vehicle"]["vehicle_id"] for event in predicted}
+        participant_ids |= {event["persons"][0]["person_id"] for event in predicted}
+        row = self.track_rows[self.current_frame] if self.current_frame < len(self.track_rows) else {"objects": []}
+        for obj in row["objects"]:
+            if obj["id"] not in participant_ids:
+                continue
+            x1, y1, x2, y2 = (int(value) for value in obj["bbox"])
+            cv2.rectangle(image, (x1, y1), (x2, y2), (230, 70, 230), 1)
+            cv2.putText(image, obj["id"], (max(1, x1), max(11, y1 - 2)), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.38, (230, 70, 230), 1, cv2.LINE_AA)
+        lines = []
+        for event in predicted:
+            lines.append(f"ALG {event['type']}: {event['persons'][0]['person_id']} -> {event['vehicle']['vehicle_id']}")
+        for event in ground_truth:
+            lines.append(f"GT  {event['type']}: {event['persons'][0]['person_id']} -> {event['vehicle']['vehicle_id']}")
+        panel_height = 6 + 14 * len(lines)
+        cv2.rectangle(image, (0, 0), (width, panel_height), (20, 20, 20), -1)
+        for number, line in enumerate(lines):
+            color = (230, 70, 230) if line.startswith("ALG") else (70, 220, 255)
+            cv2.putText(image, line, (5, 12 + 14 * number), cv2.FONT_HERSHEY_SIMPLEX, 0.38, color, 1, cv2.LINE_AA)
+        return image
 
     def seek(self, value):
         if not self.playing:
@@ -280,6 +342,7 @@ class AnnotationApp:
         self.root.mainloop()
 
 
-def launch(input_path: str | Path, output_dir: str | Path):
+def launch(input_path: str | Path, output_dir: str | Path,
+           prediction_dir: str | Path | None = None, track_dir: str | Path | None = None):
     """Open the local annotation window."""
-    AnnotationApp(input_path, output_dir).run()
+    AnnotationApp(input_path, output_dir, prediction_dir, track_dir).run()

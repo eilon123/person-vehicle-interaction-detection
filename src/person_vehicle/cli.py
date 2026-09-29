@@ -140,6 +140,8 @@ def main():
     annotate_parser = sub.add_parser("annotate", help="Open a local GUI to create confirmed and uncertain time labels")
     annotate_parser.add_argument("--input", required=True, help="MP4 file or directory of MP4 files")
     annotate_parser.add_argument("--output", default="annotations/manual", help="Directory for events.json and uncertain.json")
+    annotate_parser.add_argument("--pred", help="Pipeline output directory or clips directory to display active predictions")
+    annotate_parser.add_argument("--tracks", help="Track JSONL directory; defaults to <pred>/tracks")
     sub.add_parser("schema")
     assets = sub.add_parser("download-assets")
     assets.add_argument("--detector-only", action="store_true")
@@ -204,7 +206,7 @@ def main():
         print(json.dumps(report, indent=2))
     elif args.command == "annotate":
         from .annotate import launch
-        launch(args.input, args.output)
+        launch(args.input, args.output, args.pred, args.tracks)
     elif args.command == "schema":
         write_json("schemas/clip_output.schema.json", ClipOutput.model_json_schema())
     elif args.command == "download-assets":
