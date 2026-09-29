@@ -36,3 +36,20 @@ def test_history_contains_experiment_details(tmp_path):
     assert "Experiment 3" in result
     assert "new sampler" in result
     assert "sample_frames" in result
+
+
+def test_dashboard_temporal_metrics_can_be_filtered_by_action_type():
+    tool = load_tool("kpi_dashboard")
+    clip = {"status": "ok", "interactions": []}
+    predictions = {"scene": {**clip, "interactions": [
+        {"type": "enter", "spans": [{"start_s": 1, "end_s": 3}]},
+        {"type": "exit", "spans": [{"start_s": 8, "end_s": 9}]},
+    ]}}
+    references = {"scene": {**clip, "interactions": [
+        {"type": "enter", "spans": [{"start_s": 2, "end_s": 4}]},
+        {"type": "exit", "spans": [{"start_s": 8, "end_s": 9}]},
+    ]}}
+    enter = tool.occupancy_for_type(predictions, references, "enter")
+    exit_metric = tool.occupancy_for_type(predictions, references, "exit")
+    assert enter["temporal_iou"] == 1 / 3
+    assert exit_metric["temporal_iou"] == 1

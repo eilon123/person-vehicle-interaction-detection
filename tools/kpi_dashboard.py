@@ -66,6 +66,19 @@ def measures(counts):
             "f1": rate(2 * tp, 2 * tp + fp + fn)}
 
 
+def occupancy_for_type(predictions, references, label):
+    """Compute threshold-free temporal KPIs using only one action label."""
+    filtered_predictions = {
+        clip_id: {**clip, "interactions": [event for event in clip["interactions"] if event["type"] == label]}
+        for clip_id, clip in predictions.items()
+    }
+    filtered_references = {
+        clip_id: {**clip, "interactions": [event for event in clip["interactions"] if event["type"] == label]}
+        for clip_id, clip in references.items()
+    }
+    return temporal_occupancy(filtered_predictions, filtered_references)
+
+
 def percent(value):
     return "N/A" if value is None else f"{value * 100:.1f}%"
 
@@ -120,7 +133,7 @@ def algorithm_summary(config, evaluation_mode, threshold):
     return "".join(f"<li><strong>{html.escape(stage)}</strong> {html.escape(detail)}</li>" for stage, detail in steps)
 
 
-def dashboard(predictions, references, threshold, ignore_participants, config):
+def dashboard(predictions, references, threshold, ignore_participants, config, experiment_name=None):
     total, per_clip, per_type, confusion = summarize(predictions, references, threshold, ignore_participants)
     overall = measures(total)
     occupancy = temporal_occupancy(predictions, references)
@@ -128,17 +141,22 @@ def dashboard(predictions, references, threshold, ignore_participants, config):
     clip_rows = []
     for clip_id, counts in sorted(per_clip.items(), key=lambda item: measures(item[1])["f1"] or 0):
         m = measures(counts)
+        time = occupancy["per_clip"][clip_id]
         clip_rows.append([clip_id, m["tp"], m["fp"], m["fn"], percent(m["precision"]), percent(m["recall"]), percent(m["f1"]),
-                          percent(occupancy["per_clip"][clip_id]["temporal_iou"])])
+                          percent(time["temporal_precision"]), percent(time["temporal_recall"]),
+                          percent(time["temporal_f1"]), percent(time["temporal_iou"])])
     type_rows = []
     for label in LABELS:
         m = measures(per_type[label])
-        type_rows.append([label, m["tp"], m["fp"], m["fn"], percent(m["precision"]), percent(m["recall"]), percent(m["f1"])])
+        time = occupancy_for_type(predictions, references, label)
+        type_rows.append([label, m["tp"], m["fp"], m["fn"], percent(m["precision"]), percent(m["recall"]), percent(m["f1"]),
+                          percent(time["temporal_precision"]), percent(time["temporal_recall"]),
+                          percent(time["temporal_f1"]), percent(time["temporal_iou"])])
     columns = list(LABELS) + ["missed"]
     confusion_rows = [[row] + [confusion.get(row, {}).get(column, 0) for column in columns]
                       for row in list(LABELS) + ["false_alarm"]]
     mode = "Binary temporal event matching (participant IDs ignored)" if ignore_participants else "Pair-correct event matching"
-    experiment_name = str(config.get("experiment_name", "Experiment")).replace("_", " ").title()
+    experiment_name = str(experiment_name or config.get("experiment_name", "Experiment")).replace("_", " ").title()
     report_title = f"{experiment_name} — Person–vehicle KPI report"
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -150,8 +168,8 @@ body{{font-family:Segoe UI,Arial,sans-serif;margin:32px;background:#f7f8fa;color
 <p class="note">Time overlap is threshold-free: all predicted and GT interaction spans are unioned before comparison, so concurrent actions do not double-count time. It is {occupancy['intersection_s']:.2f}s of overlap out of {occupancy['union_s']:.2f}s total interaction time.</p>
 <section><h2>Algorithm summary</h2><ol>{algorithm_summary(config, 'binary_timeline' if ignore_participants else 'pair_correct_event', threshold)}</ol></section>
 <section><h2>Algorithm run</h2><p class="note">Configuration fingerprint: <code>{config_hash}</code>. This section is generated from the config file associated with the selected prediction directory.</p>{table(['Setting', 'Value'], algorithm_rows(config))}</section>
-<section><h2>Results by clip</h2>{table(['Clip', 'TP', 'FP', 'FN', 'Precision', 'Recall', 'F1', 'Time IoU'], clip_rows, 'clip-table')}</section>
-<section><h2>Results by action type</h2>{table(['Action type', 'TP', 'FP', 'FN', 'Precision', 'Recall', 'F1'], type_rows)}</section>
+<section><h2>Results by scene</h2><p class="note">Event KPIs use temporal IoU ≥ {threshold:.1f}; Time KPIs are threshold-free duration overlap.</p>{table(['Scene', 'TP', 'FP', 'FN', 'Precision', 'Recall', 'F1', 'Time precision', 'Time recall', 'Time F1', 'Time IoU'], clip_rows, 'clip-table')}</section>
+<section><h2>Complete KPI by interaction type</h2><p class="note">Time spans are unioned separately within each interaction type before measuring overlap.</p>{table(['Interaction type', 'TP', 'FP', 'FN', 'Precision', 'Recall', 'F1', 'Time precision', 'Time recall', 'Time F1', 'Time IoU'], type_rows)}</section>
 <section><h2>Action-type confusion</h2><p class="note">Rows are manual labels; columns are predictions. “Missed” has no matched prediction; “false alarm” has no matched manual label.</p>{table(['Manual / prediction'] + columns, confusion_rows)}</section>
 </main></body></html>"""
 
@@ -162,6 +180,7 @@ def main():
     parser.add_argument("--reference", required=True, help="Manual events.json")
     parser.add_argument("--output", required=True, help="Destination HTML file")
     parser.add_argument("--config", help="Run config.json; defaults to <pred>/config.json")
+    parser.add_argument("--experiment-name", help="Display name used in the report title")
     parser.add_argument("--tiou", type=float, default=0.5, choices=(0.3, 0.5, 0.7))
     parser.add_argument("--binary-timeline", action="store_true", help="Ignore person and vehicle IDs")
     args = parser.parse_args()
@@ -181,7 +200,8 @@ def main():
     output.parent.mkdir(parents=True, exist_ok=True)
     config_path = Path(args.config) if args.config else run_root / "config.json"
     config = read_json(config_path) if config_path.exists() else {}
-    output.write_text(dashboard(predictions, references, args.tiou, args.binary_timeline, config), encoding="utf-8")
+    output.write_text(dashboard(predictions, references, args.tiou, args.binary_timeline, config,
+                                args.experiment_name), encoding="utf-8")
     print(output.resolve())
 
 

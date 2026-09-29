@@ -7,6 +7,14 @@ import html
 import json
 from pathlib import Path
 
+from person_vehicle.events import ClipOutput
+from person_vehicle.evaluate import temporal_occupancy
+from person_vehicle.io import read_json
+try:
+    from tools.kpi_dashboard import LABELS, measures, occupancy_for_type, summarize
+except ModuleNotFoundError:  # Direct execution places tools/ rather than the project root on sys.path.
+    from kpi_dashboard import LABELS, measures, occupancy_for_type, summarize
+
 
 def pct(value):
     return "N/A" if value is None else f"{100 * value:.1f}%"
@@ -50,8 +58,25 @@ def build(root: Path):
         overview.append([name, f"{event['tp']} / {event['fp']} / {event['fn']}", pct(event["precision"]),
                          pct(event["recall"]), pct(event["f1"]), delta, pct(timing["temporal_iou"])])
         config_rows = [[key, value] for key, value in config.items()]
-        clip_rows = [[clip, values["tp"], values["fp"], values["fn"], pct(values["f1"])]
+        clip_rows = [[clip, values["tp"], values["fp"], values["fn"], pct(values["f1"]),
+                      pct(timing.get("per_clip", {}).get(clip, {}).get("temporal_iou"))]
                      for clip, values in sorted(event["per_clip"].items())]
+        type_table = "<p>Detailed type metrics unavailable for this archive.</p>"
+        gt_path = path / "ground_truth" / "events.json"
+        clips_path = path / "clips"
+        if gt_path.exists() and clips_path.exists():
+            predictions = {item.stem: ClipOutput.model_validate(read_json(item)).model_dump()
+                           for item in clips_path.glob("*.json")}
+            references = read_json(gt_path)
+            _, _, per_type, _ = summarize(predictions, references, 0.5, True)
+            type_rows = []
+            for label in LABELS:
+                values = measures(per_type[label])
+                time_values = occupancy_for_type(predictions, references, label)
+                type_rows.append([label, values["tp"], values["fp"], values["fn"],
+                                  pct(values["precision"]), pct(values["recall"]), pct(values["f1"]),
+                                  pct(time_values["temporal_iou"])])
+            type_table = table(["Interaction type", "TP", "FP", "FN", "Precision", "Recall", "F1", "Time IoU"], type_rows)
         dashboard = "kpi_dashboard.html"
         videos = "annotated_vs_gt"
         links = []
@@ -62,7 +87,8 @@ def build(root: Path):
         change = config.get("experiment_change", "No change description recorded")
         details.append(f"<section><h2>{html.escape(name)}</h2><p>{html.escape(str(change))}</p>"
                        f"<p>{' · '.join(links)}</p><h3>Results by clip</h3>"
-                       f"{table(['Clip','TP','FP','FN','F1'], clip_rows)}"
+                       f"{table(['Scene','TP','FP','FN','F1','Time IoU'], clip_rows)}"
+                       f"<h3>Complete KPI by interaction type</h3>{type_table}"
                        f"<h3>Full configuration</h3>{table(['Setting','Value'], config_rows)}</section>")
     return f"""<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>All person–vehicle experiments — comparison report</title><style>
