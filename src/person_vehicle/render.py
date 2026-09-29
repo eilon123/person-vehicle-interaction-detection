@@ -74,6 +74,19 @@ def render(path, rows, clip, destination, reference=None):
         raise ValueError("Source checksum differs from event artifact")
     destination = Path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
+    representative_dir = destination.parent / f"{destination.stem}_events"
+    representative_dir.mkdir(parents=True, exist_ok=True)
+    representatives = {}
+    target_frames = {}
+    timestamps = [row["timestamp_s"] for row in rows]
+    for event in clip["interactions"]:
+        span = event["spans"][0]
+        points = {"start": span["start_s"], "middle": (span["start_s"] + span["end_s"]) / 2,
+                  "end": span["end_s"]}
+        representatives[event["event_id"]] = {}
+        for phase, timestamp in points.items():
+            index = min(range(len(timestamps)), key=lambda i: abs(timestamps[i] - timestamp))
+            target_frames.setdefault(index, []).append((event["event_id"], phase, timestamp))
     temporary = destination.with_name(destination.stem + ".tmp.mp4")
     time_base = Fraction(1, 90000)
     metadata = []
@@ -83,6 +96,12 @@ def render(path, rows, clip, destination, reference=None):
             if index >= len(rows) or rows[index]["frame_index"] != index or abs(rows[index]["timestamp_s"] - timestamp) > 1e-6:
                 raise ValueError("Track/frame alignment mismatch")
             image, active = draw_overlay(frame.to_ndarray(format="bgr24"), rows[index], clip, reference)
+            for event_id, phase, target_timestamp in target_frames.get(index, []):
+                filename = f"{event_id}_{phase}.jpg"
+                cv2.imwrite(str(representative_dir / filename), image)
+                representatives[event_id][phase] = {"frame_index": index,
+                    "timestamp_s": timestamp, "target_timestamp_s": target_timestamp,
+                    "path": str((representative_dir / filename).relative_to(destination.parent))}
             image = cv2.copyMakeBorder(image, 0, image.shape[0] % 2, 0, image.shape[1] % 2,
                                       cv2.BORDER_CONSTANT)
             if stream is None:
@@ -119,6 +138,7 @@ def render(path, rows, clip, destination, reference=None):
     qa = {"clip_id": clip["clip_id"], "fully_decoded": True, "frame_count": len(rows),
           "max_timestamp_error_s": error, "duration_error_s": duration_error,
           "overlay_agreement": sum(row["active_event_ids"] == [e["event_id"] for e in active_events(clip["interactions"], row["timestamp_s"])] for row in metadata) / len(metadata),
-          "sha256": sha256(destination), "visual_review": "pending"}
+          "sha256": sha256(destination), "visual_review": "pending",
+          "representative_frames": representatives}
     write_json(destination.with_suffix(".qa.json"), qa)
     return qa
