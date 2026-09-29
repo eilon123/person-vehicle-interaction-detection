@@ -151,6 +151,11 @@ action-confusion results. It uses the same matching rule as evaluation:
 python tools/kpi_dashboard.py --pred outputs/final --reference annotations/manual/events.json --binary-timeline --output outputs/final/kpi_dashboard.html
 ```
 
+The dashboard records the detector, tracker, verifier model/revision, temporal
+sampling, thresholds, and seed from `outputs/final/config.json`. Pass `--config`
+when the run configuration lives elsewhere; this makes result reports comparable
+across pipeline variants.
+
 `annotations/manual/uncertain.json` is a review queue, not ground truth. Resolve
 or remove its spans before reporting KPI results. This tool uses nominal frame
 timing for navigation; retain the pipeline's timestamp-aware decoder for final

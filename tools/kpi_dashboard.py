@@ -75,7 +75,21 @@ def table(headers, rows, class_name=""):
     return f'<table class="{class_name}"><thead><tr>{head}</tr></thead><tbody>{body}</tbody></table>'
 
 
-def dashboard(predictions, references, threshold, ignore_participants):
+def algorithm_rows(config):
+    if not config:
+        return [["Run configuration", "Not found"]]
+    return [
+        ["Detector", f"{config.get('detector', 'unknown')} · image size {config.get('image_size', 'unknown')} · confidence {config.get('detection_confidence', 'unknown')}"],
+        ["Tracker", config.get("tracker", "unknown")],
+        ["Temporal verifier", f"{config.get('verifier', 'unknown')} · {config.get('vlm_model', 'unknown')}"],
+        ["Verifier revision", config.get("vlm_revision", "unknown")],
+        ["Candidate context", f"{config.get('context_s', 'unknown')} s context · {config.get('window_s', 'unknown')} s window · {config.get('window_overlap_s', 'unknown')} s overlap"],
+        ["Verifier sampling", f"{config.get('sample_frames', 'unknown')} frames · max pixels {config.get('max_pixels', 'unknown')} · 4-bit {config.get('load_in_4bit', 'unknown')}"],
+        ["Random seed", config.get("seed", "unknown")],
+    ]
+
+
+def dashboard(predictions, references, threshold, ignore_participants, config):
     total, per_clip, per_type, confusion = summarize(predictions, references, threshold, ignore_participants)
     overall = measures(total)
     occupancy = temporal_occupancy(predictions, references)
@@ -100,6 +114,7 @@ body{{font-family:Segoe UI,Arial,sans-serif;margin:32px;background:#f7f8fa;color
 <h1>Person–vehicle KPI dashboard</h1><p class="note">{html.escape(mode)} · temporal IoU ≥ {threshold:.1f} · {len(references)} labelled clips</p>
 <div class="metrics"><div class="metric">Precision<b>{percent(overall['precision'])}</b></div><div class="metric">Recall<b>{percent(overall['recall'])}</b></div><div class="metric">F1<b>{percent(overall['f1'])}</b></div><div class="metric">TP / FP / FN<b>{overall['tp']} / {overall['fp']} / {overall['fn']}</b></div><div class="metric">Time overlap IoU<b>{percent(occupancy['temporal_iou'])}</b></div></div>
 <p class="note">Time overlap is threshold-free: all predicted and GT interaction spans are unioned before comparison, so concurrent actions do not double-count time. It is {occupancy['intersection_s']:.2f}s of overlap out of {occupancy['union_s']:.2f}s total interaction time.</p>
+<section><h2>Algorithm run</h2>{table(['Setting', 'Value'], algorithm_rows(config))}</section>
 <section><h2>Results by clip</h2>{table(['Clip', 'TP', 'FP', 'FN', 'Precision', 'Recall', 'F1', 'Time IoU'], clip_rows, 'clip-table')}</section>
 <section><h2>Results by action type</h2>{table(['Action type', 'TP', 'FP', 'FN', 'Precision', 'Recall', 'F1'], type_rows)}</section>
 <section><h2>Action-type confusion</h2><p class="note">Rows are manual labels; columns are predictions. “Missed” has no matched prediction; “false alarm” has no matched manual label.</p>{table(['Manual / prediction'] + columns, confusion_rows)}</section>
@@ -111,12 +126,16 @@ def main():
     parser.add_argument("--pred", required=True, help="Pipeline output directory or clips directory")
     parser.add_argument("--reference", required=True, help="Manual events.json")
     parser.add_argument("--output", required=True, help="Destination HTML file")
+    parser.add_argument("--config", help="Run config.json; defaults to <pred>/config.json")
     parser.add_argument("--tiou", type=float, default=0.5, choices=(0.3, 0.5, 0.7))
     parser.add_argument("--binary-timeline", action="store_true", help="Ignore person and vehicle IDs")
     args = parser.parse_args()
     pred_dir = Path(args.pred)
+    run_root = pred_dir
     if (pred_dir / "clips").exists():
         pred_dir = pred_dir / "clips"
+    elif pred_dir.name == "clips":
+        run_root = pred_dir.parent
     predictions = {path.stem: ClipOutput.model_validate(read_json(path)).model_dump()
                    for path in pred_dir.glob("*.json")}
     references = read_json(args.reference)
@@ -125,7 +144,9 @@ def main():
         raise ValueError(f"Missing predictions for: {', '.join(sorted(missing))}")
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(dashboard(predictions, references, args.tiou, args.binary_timeline), encoding="utf-8")
+    config_path = Path(args.config) if args.config else run_root / "config.json"
+    config = read_json(config_path) if config_path.exists() else {}
+    output.write_text(dashboard(predictions, references, args.tiou, args.binary_timeline, config), encoding="utf-8")
     print(output.resolve())
 
 
