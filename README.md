@@ -119,6 +119,14 @@ time you evaluate, map those reference IDs to the prediction IDs (for example
 python -m person_vehicle evaluate --pred outputs/final --reference annotations/manual/events.json --mapping annotations/entity_mapping_manual.json --subset all --output outputs/final/manual_metrics.json
 ```
 
+If your annotation is deliberately binary over time and does not identify the
+person/vehicle pair, add `--binary-timeline`. This produces a separately labelled
+temporal-presence score and must not be reported as the pair-correct primary KPI:
+
+```powershell
+python -m person_vehicle evaluate --pred outputs/final --reference annotations/manual/events.json --subset all --binary-timeline --output outputs/final/manual_binary_metrics.json
+```
+
 `annotations/manual/uncertain.json` is a review queue, not ground truth. Resolve
 or remove its spans before reporting KPI results. This tool uses nominal frame
 timing for navigation; retain the pipeline's timestamp-aware decoder for final

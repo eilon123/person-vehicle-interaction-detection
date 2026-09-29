@@ -133,6 +133,8 @@ def main():
     eval_parser.add_argument("--split")
     eval_parser.add_argument("--candidates", help="Candidate JSON directory for proposal recall")
     eval_parser.add_argument("--negatives", help="Annotated negative-encounter JSON for passerby FP rate")
+    eval_parser.add_argument("--binary-timeline", action="store_true",
+                             help="Score temporal interaction presence without matching person/vehicle IDs")
     eval_parser.add_argument("--subset", default="test", choices=["test", "development", "all"])
     eval_parser.add_argument("--output", default="outputs/metrics.json")
     annotate_parser = sub.add_parser("annotate", help="Open a local GUI to create confirmed and uncertain time labels")
@@ -188,9 +190,10 @@ def main():
         if not references:
             raise ValueError("Reference annotations are empty; cannot claim accuracy metrics")
         mappings = read_json(args.mapping) if args.mapping else {}
-        results = [evaluate(predictions, references, mappings, threshold, typed)
+        results = [evaluate(predictions, references, mappings, threshold, typed, args.binary_timeline)
                    for threshold in [0.3, 0.5, 0.7] for typed in [False, True]]
-        report = {"event_metrics": results}
+        report = {"event_metrics": results,
+                  "evaluation_mode": "binary_timeline" if args.binary_timeline else "pair_correct_event"}
         if args.candidates:
             candidates = {p.stem: read_json(p) for p in Path(args.candidates).glob("*.json")}
             report["proposal_recall"] = proposal_recall(candidates, references, mappings)

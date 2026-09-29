@@ -28,7 +28,7 @@ def pair(event, mapping=None):
     return mapping.get(person, person), mapping.get(vehicle, vehicle)
 
 
-def match_events(predictions, references, threshold=0.5, typed=False, mapping=None):
+def match_events(predictions, references, threshold=0.5, typed=False, mapping=None, ignore_participants=False):
     if not predictions or not references:
         return []
     # Bonus larger than any possible summed IoU enforces maximum cardinality first.
@@ -36,7 +36,8 @@ def match_events(predictions, references, threshold=0.5, typed=False, mapping=No
     weights = np.zeros((len(predictions), len(references)))
     for i, prediction in enumerate(predictions):
         for j, reference in enumerate(references):
-            if pair(prediction, mapping) != pair(reference) or (typed and prediction["type"] != reference["type"]):
+            if ((not ignore_participants and pair(prediction, mapping) != pair(reference))
+                    or (typed and prediction["type"] != reference["type"])):
                 continue
             overlap = temporal_iou(prediction["spans"], reference["spans"])
             if overlap >= threshold:
@@ -52,7 +53,7 @@ def rates(tp, fp, fn):
             "f1": 2 * tp / (2 * tp + fp + fn) if 2 * tp + fp + fn else None}
 
 
-def evaluate(predictions, references, mappings=None, threshold=0.5, typed=False):
+def evaluate(predictions, references, mappings=None, threshold=0.5, typed=False, ignore_participants=False):
     mappings = mappings or {}
     tp = fp = fn = 0
     per_clip = {}
@@ -63,7 +64,7 @@ def evaluate(predictions, references, mappings=None, threshold=0.5, typed=False)
             raise ValueError(f"Missing or failed prediction for {clip_id}; report pipeline failure separately")
         predicted = predictions[clip_id]["interactions"]
         truth = reference["interactions"]
-        matches = match_events(predicted, truth, threshold, typed, mappings.get(clip_id))
+        matches = match_events(predicted, truth, threshold, typed, mappings.get(clip_id), ignore_participants)
         clip_tp = len(matches)
         clip_fp, clip_fn = len(predicted) - clip_tp, len(truth) - clip_tp
         per_clip[clip_id] = rates(clip_tp, clip_fp, clip_fn)
@@ -75,7 +76,9 @@ def evaluate(predictions, references, mappings=None, threshold=0.5, typed=False)
             if not truth[j].get("truncated_end", False):
                 ends.append(abs(predicted[i]["spans"][-1]["end_s"] - truth[j]["spans"][-1]["end_s"]))
     summary = rates(tp, fp, fn)
-    summary.update({"tiou_threshold": threshold, "type_aware": typed, "per_clip": per_clip,
+    summary.update({"tiou_threshold": threshold, "type_aware": typed,
+                    "participant_matching": "ignored" if ignore_participants else "required",
+                    "per_clip": per_clip,
                     "false_alarms_per_minute": fp / (duration / 60) if duration else None})
     for label, errors in (("start", starts), ("end", ends)):
         summary[f"{label}_error_s"] = {"n": len(errors), "median": float(np.median(errors)) if errors else None,
