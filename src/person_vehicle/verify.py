@@ -34,6 +34,17 @@ Use only supplied frame indices. start_frame and end_frame delimit visible actio
 end_frame is inclusive. events must be empty unless decision is interaction.
 Multiple distinct actions may be returned. Include associated door action in an
 entry/exit rather than duplicating it. Explain what supports action direction.
+First compare the person's state in the earliest, middle, and latest frames:
+outside the vehicle, crossing a visible doorway/cabin boundary, inside/absent with
+direct transition evidence, or unknown. Enter requires an outside-to-inside body
+transition; exit requires the reverse. A door operation requires visible door
+movement caused by the target person. Reaching toward a door, standing beside it,
+or a static open door is not enough. If the body transition is visible, prefer
+enter/exit and include its associated door action in that event.
+Use the full visible action range, from the first directed movement to completion.
+Do not create a one-frame event unless the action is cut by a clip boundary.
+Before returning interaction, identify at least two chronological observations
+that support the action. Otherwise return uncertain or no_interaction.
 """
 
 
@@ -104,13 +115,40 @@ class QwenVerifier:
         return self.processor.batch_decode(output[:, inputs.input_ids.shape[1]:], skip_special_tokens=True)[0]
 
 
-def sample_window(path, rows, candidate, count):
+def select_sample_rows(eligible, candidate, count, strategy="uniform"):
+    if not eligible:
+        return []
+    count = min(count, len(eligible))
+    if strategy != "transition_dense" or count < 6:
+        positions = np.linspace(0, len(eligible) - 1, count, dtype=int)
+        return [eligible[i] for i in sorted(set(positions))]
+    selected = set(np.linspace(0, len(eligible) - 1, max(4, count // 2), dtype=int).tolist())
+    target_ids = {candidate["person_id"], candidate["vehicle_id"]}
+    visibility = [frozenset(obj["id"] for obj in row["objects"] if obj["id"] in target_ids)
+                  for row in eligible]
+    transitions = {0, len(eligible) - 1}
+    transitions.update(i for i in range(1, len(eligible)) if visibility[i] != visibility[i - 1])
+    radius = 0
+    while len(selected) < count and radius < len(eligible):
+        for center in sorted(transitions):
+            for position in (center - radius, center + radius):
+                if 0 <= position < len(eligible):
+                    selected.add(position)
+                    if len(selected) == count:
+                        break
+            if len(selected) == count:
+                break
+        radius += 1
+    return [eligible[i] for i in sorted(selected)]
+
+
+def sample_window(path, rows, candidate, count, strategy="uniform"):
     eligible = [row for row in rows if candidate["start_s"] <= row["timestamp_s"] < candidate["end_s"]
                 and row["scene"] == candidate["scene"]]
     if not eligible:
         return [], []
-    indices = sorted(set(np.linspace(0, len(eligible) - 1, min(count, len(eligible)), dtype=int)))
-    selected = {eligible[i]["frame_index"]: eligible[i] for i in indices}
+    sampled_rows = select_sample_rows(eligible, candidate, count, strategy)
+    selected = {row["frame_index"]: row for row in sampled_rows}
     pair_boxes = [obj["bbox"] for row in eligible for obj in row["objects"]
                   if obj["id"] in (candidate["person_id"], candidate["vehicle_id"])]
     # One fixed crop across time avoids artificial camera movement and keeps a
@@ -153,7 +191,8 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
     cache = Path(output) / "verification" / Path(path).stem
     for candidate in candidates:
         print(f"{Path(path).stem}: verify {candidate['candidate_id']}/{len(candidates)}", flush=True)
-        images, indices = sample_window(path, rows, candidate, config["sample_frames"])
+        images, indices = sample_window(path, rows, candidate, config["sample_frames"],
+                                        config.get("sampling_strategy", "uniform"))
         prompt = PROMPT.format(**candidate) + "\nAllowed frame indices in chronological order: " + str(indices)
         signature = fingerprint({"candidate": candidate, "source": metadata["source_sha256"],
                                  "config": config, "prompt": prompt, "indices": indices,
@@ -175,9 +214,12 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
                 # Invalid model output is exposed, never silently treated as a negative.
                 decision = {"decision": "uncertain", "reason": f"Invalid verifier response: {error}", "events": []}
             write_json(file, {"candidate": candidate, "frame_ids": indices, "raw": text, "decision": decision})
-        reviews.append({**candidate, **decision})
+        rejected = []
         for event in decision["events"]:
             start, end = event["start_frame"], event["end_frame"]
+            if config.get("require_multi_frame_event", False) and start == end and start not in (0, len(rows) - 1):
+                rejected.append({**event, "postprocess_reason": "single-frame event without clip-boundary truncation"})
+                continue
             events.append({"event_id": "pending", "type": event["type"],
                 "persons": [{"person_id": candidate["person_id"], "description": event["person_description"]}],
                 "vehicle": {"vehicle_id": candidate["vehicle_id"], "description": event["vehicle_description"]},
@@ -185,4 +227,5 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
                            "end_s": rows[end + 1]["timestamp_s"] if end + 1 < len(rows) else metadata["duration_s"]}],
                 "truncated_start": start == 0, "truncated_end": end == len(rows) - 1,
                 "evidence_frames": event["evidence_frames"], "group_id": None})
+        reviews.append({**candidate, **decision, "postprocess_rejected_events": rejected})
     return events, reviews

@@ -21,3 +21,14 @@ Use only supplied frame indices. start_frame and end_frame delimit visible actio
 end_frame is inclusive. events must be empty unless decision is interaction.
 Multiple distinct actions may be returned. Include associated door action in an
 entry/exit rather than duplicating it. Explain what supports action direction.
+First compare the person's state in the earliest, middle, and latest frames:
+outside the vehicle, crossing a visible doorway/cabin boundary, inside/absent with
+direct transition evidence, or unknown. Enter requires an outside-to-inside body
+transition; exit requires the reverse. A door operation requires visible door
+movement caused by the target person. Reaching toward a door, standing beside it,
+or a static open door is not enough. If the body transition is visible, prefer
+enter/exit and include its associated door action in that event.
+Use the full visible action range, from the first directed movement to completion.
+Do not create a one-frame event unless the action is cut by a clip boundary.
+Before returning interaction, identify at least two chronological observations
+that support the action. Otherwise return uncertain or no_interaction.

@@ -4,7 +4,7 @@ import pytest
 
 from person_vehicle.events import ClipOutput, active_events, merge_events
 from person_vehicle.evaluate import evaluate, match_events, temporal_iou
-from person_vehicle.verify import parse_decision
+from person_vehicle.verify import parse_decision, select_sample_rows
 
 
 def event(start=1, end=3, person="p1", action="enter"):
@@ -55,6 +55,15 @@ def test_verifier_rejects_invented_evidence():
     with pytest.raises(ValueError):
         parse_decision(text, [0, 5, 10])
     assert parse_decision('{"decision":"uncertain","reason":"occluded","events":[]}', [0])["decision"] == "uncertain"
+
+
+def test_transition_dense_sampling_keeps_context_and_visibility_change():
+    rows = [{"frame_index": i, "objects": ([{"id": "v"}] + ([{"id": "p"}] if 4 <= i < 7 else []))}
+            for i in range(10)]
+    selected = select_sample_rows(rows, {"person_id": "p", "vehicle_id": "v"}, 6, "transition_dense")
+    indices = [row["frame_index"] for row in selected]
+    assert indices[0] == 0 and indices[-1] == 9
+    assert 4 in indices and 7 in indices
 
 
 def test_eval_counts_and_undefined_rates():
