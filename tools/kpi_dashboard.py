@@ -92,7 +92,7 @@ def table(headers, rows, class_name=""):
 def algorithm_rows(config):
     if not config:
         return [["Run configuration", "Not found"]]
-    return [
+    rows = [
         ["Detector", f"{config.get('detector', 'unknown')} · image size {config.get('image_size', 'unknown')} · confidence {config.get('detection_confidence', 'unknown')}"],
         ["Tracker", config.get("tracker", "unknown")],
         ["Temporal verifier", f"{config.get('verifier', 'unknown')} · {config.get('vlm_model', 'unknown')}"],
@@ -101,6 +101,13 @@ def algorithm_rows(config):
         ["Verifier sampling", f"{config.get('sample_frames', 'unknown')} frames · max pixels {config.get('max_pixels', 'unknown')} · 4-bit {config.get('load_in_4bit', 'unknown')}"],
         ["Random seed", config.get("seed", "unknown")],
     ]
+    if config.get("candidate_filter"):
+        rows.extend([
+            ["Learned candidate filter", config["candidate_filter"]],
+            ["Training protocol", config.get("training_protocol", "unknown")],
+            ["Training sample count", config.get("training_sample_count", "unknown")],
+        ])
+    return rows
 
 
 def algorithm_summary(config, evaluation_mode, threshold):
@@ -159,12 +166,16 @@ def dashboard(predictions, references, threshold, ignore_participants, config, e
     mode = "Binary temporal event matching (participant IDs ignored)" if ignore_participants else "Pair-correct event matching"
     experiment_name = str(experiment_name or config.get("experiment_name", "Experiment")).replace("_", " ").title()
     report_title = f"{experiment_name} — Person–vehicle KPI report"
+    training_note = ("<p class=\"note\"><strong>Training/evaluation note:</strong> This run used a small sample from the same videos being evaluated. "
+                     "Its KPI measures dataset adaptation and is not an independent generalization estimate.</p>"
+                     if "in_sample" in str(config.get("training_protocol", "")) else "")
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{html.escape(report_title)}</title><style>
 body{{font-family:Segoe UI,Arial,sans-serif;margin:32px;background:#f7f8fa;color:#1c2530}} main{{max-width:1200px;margin:auto}} h1{{margin-bottom:4px}} .note{{color:#52606d}} .metrics{{display:flex;gap:14px;flex-wrap:wrap;margin:22px 0}} .metric{{background:#fff;border:1px solid #d7dde4;border-radius:10px;padding:14px 18px;min-width:120px}} .metric b{{display:block;font-size:26px;margin-top:5px}} section{{margin-top:30px}} table{{border-collapse:collapse;width:100%;background:#fff}} th,td{{padding:9px 10px;border-bottom:1px solid #e4e8ed;text-align:right}} th:first-child,td:first-child{{text-align:left}} th{{background:#edf2f7;font-weight:600}} tr:hover td{{background:#f8fbff}} .f1{{font-weight:700}} @media(max-width:680px){{body{{margin:14px}}th,td{{padding:7px 5px;font-size:12px}}}}
 </style></head><body><main>
 <h1>{html.escape(report_title)}</h1><p class="note">Standalone results for {html.escape(experiment_name)} · {html.escape(mode)} · temporal IoU ≥ {threshold:.1f} · {len(references)} labelled clips</p>
+{training_note}
 <div class="metrics"><div class="metric">Precision<b>{percent(overall['precision'])}</b></div><div class="metric">Recall<b>{percent(overall['recall'])}</b></div><div class="metric">F1<b>{percent(overall['f1'])}</b></div><div class="metric">TP / FP / FN<b>{overall['tp']} / {overall['fp']} / {overall['fn']}</b></div><div class="metric">Class-agnostic Time IoU<b>{percent(occupancy['temporal_iou'])}</b></div><div class="metric">GT time covered<b>{percent(occupancy['temporal_recall'])}</b></div><div class="metric">Overlap time<b>{occupancy['intersection_s']:.2f}s</b></div></div>
 <p class="note"><strong>Class-agnostic temporal overlap</strong> ignores the predicted and GT action labels. All predicted spans and all GT spans are unioned before comparison, so concurrent actions do not double-count time. Overlap: {occupancy['intersection_s']:.2f}s; predicted interaction time: {occupancy['predicted_s']:.2f}s; GT interaction time: {occupancy['reference_s']:.2f}s; union: {occupancy['union_s']:.2f}s.</p>
 <section><h2>Algorithm summary</h2><ol>{algorithm_summary(config, 'binary_timeline' if ignore_participants else 'pair_correct_event', threshold)}</ol></section>
