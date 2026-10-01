@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import re
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -30,7 +29,8 @@ def main():
     parser = argparse.ArgumentParser(description="Run a complete numbered experiment and refresh the history report")
     parser.add_argument("--input", required=True, help="Video file or directory")
     parser.add_argument("--config", required=True, help="YAML configuration for this experiment")
-    parser.add_argument("--reference", required=True, help="Manual GT events.json")
+    parser.add_argument("--reference", default=str(PROJECT / "annotations" / "manual" / "events.json"),
+                        help="Canonical manual GT; defaults to annotations/manual/events.json")
     parser.add_argument("--experiments-root", default="experiment_results")
     parser.add_argument("--number", type=int, help="Explicit experiment number; defaults to the next available number")
     parser.add_argument("--description", help="Short description of what changed in this experiment")
@@ -51,9 +51,9 @@ def main():
         config["experiment_change"] = args.description
     generated_config = output / "experiment_config.yaml"
     generated_config.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
-    ground_truth = output / "ground_truth" / "events.json"
-    ground_truth.parent.mkdir()
-    shutil.copy2(args.reference, ground_truth)
+    ground_truth = Path(args.reference).resolve()
+    if not ground_truth.exists():
+        raise FileNotFoundError(f"Canonical GT not found: {ground_truth}; create it with person_vehicle annotate")
 
     run_command = [sys.executable, "-m", "person_vehicle", "run", "--input", args.input,
                    "--output", output, "--config", generated_config]
@@ -65,13 +65,14 @@ def main():
             "--output", output / "manual_binary_metrics.json")
     execute(sys.executable, "tools/kpi_dashboard.py", "--pred", output, "--reference", ground_truth,
             "--binary-timeline", "--output", output / "kpi_dashboard.html")
-    execute(sys.executable, "-m", "person_vehicle", "render", "--input", args.input,
+    execute(sys.executable, "tools/create_live_review.py", "--input", args.input,
             "--events", output / "clips", "--tracks", output / "tracks", "--reference", ground_truth,
-            "--output", output / "annotated_vs_gt")
-    execute(sys.executable, "tools/experiment_history.py", "--experiments-root", root)
+            "--output", output / "live_review.html")
+    execute(sys.executable, "tools/experiment_history.py", "--experiments-root", root,
+            "--reference", ground_truth)
     print(f"\nExperiment {number} complete: {output}")
     print(f"KPI report: {output / 'kpi_dashboard.html'}")
-    print(f"Annotated videos vs GT: {output / 'annotated_vs_gt'}")
+    print(f"Live ALG vs GT review: {output / 'live_review.html'}")
     print(f"All-experiment comparison: {root / 'all_experiments.html'}")
 
 

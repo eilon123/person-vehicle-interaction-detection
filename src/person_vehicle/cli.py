@@ -11,7 +11,8 @@ import numpy as np
 import yaml
 
 from .candidates import propose
-from .events import ClipOutput, merge_events
+from .events import (ClipOutput, apply_track_consistency_rules, collapse_physical_episodes,
+                     expand_event_boundaries, merge_events)
 from .evaluate import evaluate, proposal_recall, passerby_false_positive_rate, temporal_occupancy
 from .io import fingerprint, read_json, sha256, videos, write_json
 from .video import audit, probe
@@ -68,9 +69,14 @@ def run(args):
             write_json(output / "candidates" / f"{path.stem}.json", candidates)
             events, reviews = verify_candidates(path, rows, candidates, metadata, config, output, verifier_factory,
                                                 resume=not args.no_resume)
+            assembled = merge_events(events, rows if config.get("exclusive_person_vehicle", True) else None)
+            assembled = expand_event_boundaries(assembled, rows, config, metadata["duration_s"])
+            assembled = merge_events(assembled, rows if config.get("exclusive_person_vehicle", True) else None)
+            assembled = apply_track_consistency_rules(assembled, rows, config)
+            assembled = collapse_physical_episodes(assembled, rows, config)
             clip = ClipOutput(clip_id=path.stem, source_sha256=metadata["source_sha256"], status="ok",
                               duration_s=metadata["duration_s"], frame_count=metadata["frame_count"],
-                              interactions=merge_events(events)).model_dump()
+                              interactions=assembled).model_dump()
             write_json(output / "clips" / f"{path.stem}.json", clip)
             write_json(output / "review" / f"{path.stem}.json", reviews)
             record = {"clip_id": path.stem, "status": "ok", "events": len(clip["interactions"]),
@@ -220,6 +226,17 @@ def main():
         if not target.exists():
             urllib.request.urlretrieve(f"https://github.com/ultralytics/assets/releases/download/v8.3.0/{target.name}", target)
         assets = {"detector": str(target), "detector_sha256": sha256(target)}
+        if config.get("head_detection_enabled", False):
+            from huggingface_hub import hf_hub_download
+            head_target = Path(config["head_detector"])
+            if not head_target.exists():
+                downloaded = hf_hub_download(
+                    repo_id="abhiWanKenobi/yolov8n_head_detection",
+                    filename="yolov8n_head_detector.pt", local_dir=str(head_target.parent))
+                if Path(downloaded) != head_target:
+                    Path(downloaded).replace(head_target)
+            assets["head_detector"] = str(head_target)
+            assets["head_detector_sha256"] = sha256(head_target)
         if not args.detector_only:
             from huggingface_hub import snapshot_download
             location = snapshot_download(config["vlm_model"], revision=config["vlm_revision"],

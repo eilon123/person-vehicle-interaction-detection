@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import cv2
@@ -291,7 +292,10 @@ class AnnotationApp:
         else:
             clip = self.reference.setdefault(self.clip_id, empty_clip(self.metadata["duration_s"]))
             try:
-                event = make_event(len(clip["interactions"]) + 1, start_s, end_s, start_frame, end_frame,
+                used_numbers = [int(match.group(1)) for item in clip["interactions"]
+                                if (match := re.fullmatch(r"ref(\d+)", item.get("event_id", "")))]
+                next_number = max(used_numbers, default=0) + 1
+                event = make_event(next_number, start_s, end_s, start_frame, end_frame,
                                    self.type_var.get(), self.person_id.get(), self.person_description.get(),
                                    self.vehicle_id.get(), self.vehicle_description.get())
             except ValueError as error:

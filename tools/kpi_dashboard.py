@@ -98,6 +98,14 @@ def algorithm_rows(config):
         ["Temporal verifier", f"{config.get('verifier', 'unknown')} · {config.get('vlm_model', 'unknown')}"],
         ["Verifier revision", config.get("vlm_revision", "unknown")],
         ["Candidate context", f"{config.get('context_s', 'unknown')} s context · {config.get('window_s', 'unknown')} s window · {config.get('window_overlap_s', 'unknown')} s overlap"],
+        ["Exclusive person–vehicle assignment", config.get("exclusive_person_vehicle", False)],
+        ["Initial no-track exit probe", f"{config.get('initial_vehicle_exit_probe_s', 0)} s"],
+        ["Tracked exit-motion cue", config.get("exit_motion_cue", False)],
+        ["Partial-person head detector", (f"{config.get('head_detector')} Â· confidence "
+                                          f"{config.get('head_detection_confidence')}"
+                                          if config.get("head_detection_enabled") else False)],
+        ["Guarded enter/exit direction correction", config.get("direction_correction_enabled", False)],
+        ["Load/unload access-action rule", config.get("load_unload_access_rule", False)],
         ["Verifier sampling", f"{config.get('sample_frames', 'unknown')} frames · max pixels {config.get('max_pixels', 'unknown')} · 4-bit {config.get('load_in_4bit', 'unknown')}"],
         ["Random seed", config.get("seed", "unknown")],
     ]
@@ -119,6 +127,10 @@ def algorithm_summary(config, evaluation_mode, threshold):
                         f"{value('sample_frames')} chronologically selected frames. It decides whether an interaction "
                         "occurred, its action type, its person–vehicle pair, and supported evidence frames. "
                         f"Inference uses 4-bit loading: {value('load_in_4bit')}.")
+        if value("load_unload_access_rule", False):
+            verification += (" For load/unload, an object moving through a vehicle opening, hands or arms working inside, "
+                             "or a partial-body lean into the opening followed by withdrawal can support the label. "
+                             "The person remains outside; door movement or proximity alone is insufficient.")
     else:
         verification = f"Candidate windows are processed by the configured verifier: {verifier}."
     mode = ("Participant IDs are ignored in the thresholded event metric; this evaluates temporal event presence."
@@ -127,22 +139,46 @@ def algorithm_summary(config, evaluation_mode, threshold):
     steps = [
         ("Detection.", f"Every decoded frame is processed by {value('detector')} at image size {value('image_size')} "
                          f"with detection confidence at least {value('detection_confidence')}."),
-        ("Tracking.", f"{value('tracker')} assigns stable local person and vehicle IDs within a clip. IDs are reset for each clip."),
+        ("Tracking.", f"{value('tracker')} assigns stable local person and vehicle IDs within a clip. IDs are reset for each clip. "
+                      + ("A separate head detector supplies low-confidence partial-person observations when no existing person box contains or closely covers the head. The inferred body box enters the same tracker, so a head-only observation can continue as a full person once the body becomes visible. "
+                         if value('head_detection_enabled', False) else "")),
         ("Candidate generation.", f"The pipeline proposes person–vehicle windows from spatial proximity (near margin {value('near_margin')}), "
-                                  f"track appearance/disappearance (gap {value('candidate_gap_s')} s), and temporal context of {value('context_s')} s."),
+                                  f"track appearance/disappearance (gap {value('candidate_gap_s')} s), and temporal context of {value('context_s')} s. "
+                                  + ("When a person is near multiple vehicles in one frame, only the nearest normalized box gap is retained. "
+                                     if value('exclusive_person_vehicle', False) else "")),
         ("Temporal verification.", verification),
+        ("Exit detection.", (f"If no person track exists during the first {value('initial_vehicle_exit_probe_s')} s, "
+                              "the largest tracked vehicle gets an extra VLM window starting at clip time zero. "
+                              "The verifier must see a person emerge from the vehicle cabin before returning exit. "
+                              if value('initial_vehicle_exit_probe_s', 0) else "")
+                             + ("For tracked people, an observed inside-box to outside-box trajectory is supplied "
+                                "to the verifier as a possible exit cue, subject to visual confirmation."
+                                if value('exit_motion_cue', False) else "")
+                             + ("After the VLM has already classified an event as enter or exit, a strong tracked outside-to-inside or inside-to-outside transition may correct only its direction. This rule cannot create an interaction or convert another action into enter/exit."
+                                if value('direction_correction_enabled', False) else "")),
         ("Event assembly.", "Overlapping duplicate proposals for the same supported action and pair are merged; disjoint supported spans remain separate. "
-                            "The finalized event JSON is the source of truth for both metrics and video overlays."),
+                            + ("If context windows create simultaneous assignments of one person to different vehicles, the spans are trimmed using the closest available track geometry, with verifier evidence and stable IDs as fallbacks. "
+                               if value('exclusive_person_vehicle', False) else "")
+                            + "The finalized event JSON is the source of truth for both metrics and video overlays."),
         ("Evaluation.", f"Thresholded event precision, recall, and F1 use temporal IoU ≥ {threshold:.1f}. {mode} "
                            "The separate Time overlap IoU has no threshold: it unions all predicted and reference interaction spans, "
                            "so simultaneous actions do not double-count time."),
     ]
-    return "".join(f"<li><strong>{html.escape(stage)}</strong> {html.escape(detail)}</li>" for stage, detail in steps)
+    return "".join(f"<li><strong>{html.escape(stage)}</strong> {html.escape(detail)}</li>" for stage, detail in steps if detail)
 
 
 def dashboard(predictions, references, threshold, ignore_participants, config, experiment_name=None):
     total, per_clip, per_type, confusion = summarize(predictions, references, threshold, ignore_participants)
     overall = measures(total)
+    typed_total = Counter()
+    for clip_id, truth_clip in references.items():
+        predicted = predictions[clip_id]["interactions"]
+        truth = truth_clip["interactions"]
+        typed_matches = match_events(predicted, truth, threshold=threshold, typed=True,
+                                     ignore_participants=ignore_participants)
+        typed_total.update(tp=len(typed_matches), fp=len(predicted) - len(typed_matches),
+                           fn=len(truth) - len(typed_matches))
+    typed_overall = measures(typed_total)
     occupancy = temporal_occupancy(predictions, references)
     config_hash = hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()[:12] if config else "not available"
     clip_rows = []
@@ -177,6 +213,9 @@ body{{font-family:Segoe UI,Arial,sans-serif;margin:32px;background:#f7f8fa;color
 <h1>{html.escape(report_title)}</h1><p class="note">Standalone results for {html.escape(experiment_name)} · {html.escape(mode)} · temporal IoU ≥ {threshold:.1f} · {len(references)} labelled clips</p>
 {training_note}
 <div class="metrics"><div class="metric">Precision<b>{percent(overall['precision'])}</b></div><div class="metric">Recall<b>{percent(overall['recall'])}</b></div><div class="metric">F1<b>{percent(overall['f1'])}</b></div><div class="metric">TP / FP / FN<b>{overall['tp']} / {overall['fp']} / {overall['fn']}</b></div><div class="metric">Class-agnostic Time IoU<b>{percent(occupancy['temporal_iou'])}</b></div><div class="metric">GT time covered<b>{percent(occupancy['temporal_recall'])}</b></div><div class="metric">Overlap time<b>{occupancy['intersection_s']:.2f}s</b></div></div>
+<section><h2>GT comparison: action type ignored vs required</h2><p class="note">Both rows require the same temporal IoU. “Interaction detected” counts a temporal match even when the action label is wrong. “Correct action type” also requires the predicted label to equal the GT label.</p>{table(['Evaluation','TP','FP','FN','Precision','Recall','F1'], [
+['Interaction detected (type ignored)', overall['tp'], overall['fp'], overall['fn'], percent(overall['precision']), percent(overall['recall']), percent(overall['f1'])],
+['Correct action type required', typed_overall['tp'], typed_overall['fp'], typed_overall['fn'], percent(typed_overall['precision']), percent(typed_overall['recall']), percent(typed_overall['f1'])]])}</section>
 <p class="note"><strong>Class-agnostic temporal overlap</strong> ignores the predicted and GT action labels. All predicted spans and all GT spans are unioned before comparison, so concurrent actions do not double-count time. Overlap: {occupancy['intersection_s']:.2f}s; predicted interaction time: {occupancy['predicted_s']:.2f}s; GT interaction time: {occupancy['reference_s']:.2f}s; union: {occupancy['union_s']:.2f}s.</p>
 <section><h2>Algorithm summary</h2><ol>{algorithm_summary(config, 'binary_timeline' if ignore_participants else 'pair_correct_event', threshold)}</ol></section>
 <section><h2>Algorithm run</h2><p class="note">Configuration fingerprint: <code>{config_hash}</code>. This section is generated from the config file associated with the selected prediction directory.</p>{table(['Setting', 'Value'], algorithm_rows(config))}</section>

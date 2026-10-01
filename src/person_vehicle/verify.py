@@ -47,6 +47,36 @@ Before returning interaction, identify at least two chronological observations
 that support the action. Otherwise return uncertain or no_interaction.
 """
 
+LOAD_UNLOAD_ACCESS_RULE = ("For load_unload, look for a directed loading or unloading action at a "
+                           "vehicle access opening such as a door, trunk, or cargo compartment. The "
+                           "opening may already be open or may open during the action. Evidence may "
+                           "be an object moving into or out of the vehicle, hands or arms working "
+                           "inside, or a person leaning part of their body into the opening and then "
+                           "withdrawing while remaining outside. The object and hands need not both "
+                           "be visible. Include an associated opening in the load_unload event rather "
+                           "than duplicating it as door_operation. Door movement alone, proximity, "
+                           "or standing beside an open vehicle is insufficient. Full-body movement "
+                           "into or out of the cabin is enter or exit, not load_unload. If the "
+                           "directed access action is not visible, answer uncertain.")
+
+UNTRACKED_EXIT_PROMPT = """Examine the chronological frames around vehicle {vehicle_id} (blue box).
+The person detector did not provide a person track at the beginning of this clip.
+Look for a person who is initially inside or obscured by this vehicle and then
+visibly emerges from its cabin and moves outward. If that body transition is
+visible, classify it as exit even if there is no green person box. Give the
+first and last supplied frame indices supporting the transition and at least
+two supplied evidence frame indices. Describe the visible person and vehicle.
+Do not infer an exit from proximity, a passerby, a person appearing behind the
+vehicle, or camera motion alone. If the cabin-to-outside transition cannot be
+seen, return uncertain or no_interaction.
+Return a JSON object with decision, reason, events. decision must be one of
+interaction, no_interaction, uncertain. events must be empty unless decision
+is interaction; each event has type exit, start_frame, end_frame,
+person_description, vehicle_description, evidence_frames. Frame fields are
+integers and end_frame is inclusive. Allowed frame indices in chronological
+order: {indices}.
+"""
+
 VOTING_PROMPT = """You are examining chronological video frames for person {person_id} (green box)
 and vehicle {vehicle_id} (blue box). Evaluate each listed temporal ballot independently.
 A ballot supports interaction only when it shows directed action: entering, exiting, opening or
@@ -229,15 +259,16 @@ def select_sample_rows(eligible, candidate, count, strategy="uniform"):
     return [eligible[i] for i in sorted(selected)]
 
 
-def sample_window(path, rows, candidate, count, strategy="uniform"):
+def sample_window(path, rows, candidate, count, strategy="uniform", related_person_ids=None):
     eligible = [row for row in rows if candidate["start_s"] <= row["timestamp_s"] < candidate["end_s"]
                 and row["scene"] == candidate["scene"]]
     if not eligible:
         return [], []
     sampled_rows = select_sample_rows(eligible, candidate, count, strategy)
     selected = {row["frame_index"]: row for row in sampled_rows}
-    pair_boxes = [obj["bbox"] for row in eligible for obj in row["objects"]
-                  if obj["id"] in (candidate["person_id"], candidate["vehicle_id"])]
+    related_person_ids = set(related_person_ids or [])
+    focus_ids = {candidate["person_id"], candidate["vehicle_id"], *related_person_ids}
+    pair_boxes = [obj["bbox"] for row in eligible for obj in row["objects"] if obj["id"] in focus_ids]
     # One fixed crop across time avoids artificial camera movement and keeps a
     # disappearing person in view, with a margin for nearby scene context.
     crop = None
@@ -253,12 +284,13 @@ def sample_window(path, rows, candidate, count, strategy="uniform"):
         image = frame.to_image()
         draw = ImageDraw.Draw(image)
         for obj in selected[index]["objects"]:
-            if obj["id"] in (candidate["person_id"], candidate["vehicle_id"]):
-                color = "lime" if obj["id"] == candidate["person_id"] else "cyan"
+            if obj["id"] in focus_ids:
+                color = ("lime" if obj["id"] == candidate["person_id"] else
+                         "orange" if obj["id"] in related_person_ids else "cyan")
                 draw.rectangle(obj["bbox"], outline=color, width=3)
                 draw.text((obj["bbox"][0], max(20, obj["bbox"][1] - 15)), obj["id"], fill=color)
         if crop:
-            margin = max(crop[2] - crop[0], crop[3] - crop[1]) * 0.12
+            margin = max(crop[2] - crop[0], crop[3] - crop[1]) * (0.3 if candidate["person_id"].startswith("untracked_") else 0.12)
             bounds = (max(0, int(crop[0] - margin)), max(0, int(crop[1] - margin)),
                       min(image.width, int(crop[2] + margin)), min(image.height, int(crop[3] + margin)))
             focused = image.crop(bounds)
@@ -270,6 +302,169 @@ def sample_window(path, rows, candidate, count, strategy="uniform"):
         images.append(image)
         frame_ids.append(index)
     return images, frame_ids
+
+
+def exit_motion_cue(rows, candidate, indices):
+    """Describe a tracked person moving from the vehicle box to outside it."""
+    observations = []
+    for index in indices:
+        row = rows[index]
+        objects = {obj["id"]: obj for obj in row["objects"]}
+        person = objects.get(candidate["person_id"])
+        vehicle = objects.get(candidate["vehicle_id"])
+        if not person or not vehicle:
+            continue
+        px1, py1, px2, py2 = person["bbox"]
+        vx1, vy1, vx2, vy2 = vehicle["bbox"]
+        cx, cy = (px1 + px2) / 2, (py1 + py2) / 2
+        inside_box = vx1 <= cx <= vx2 and vy1 <= cy <= vy2
+        dx = max(vx1 - px2, px1 - vx2, 0)
+        dy = max(vy1 - py2, py1 - vy2, 0)
+        gap = (dx * dx + dy * dy) ** 0.5 / max(vx2 - vx1, vy2 - vy1, 1e-6)
+        observations.append((index, inside_box, gap))
+    for first in observations:
+        if not first[1]:
+            continue
+        later = [item for item in observations if item[0] > first[0] and not item[1]]
+        if len(later) >= 2 and later[-1][2] > first[2] + 0.1:
+            return (f"Track motion suggests a possible exit: the person center is within the vehicle "
+                    f"box at frame {first[0]}, then outside it by frame {later[0][0]}, with "
+                    f"greater separation by frame {later[-1][0]}. Inspect those frames for actual "
+                    "cabin-to-outside body movement. If visible, prefer exit over other_interaction "
+                    "or door_operation. Box overlap alone does not prove the person was in the cabin.")
+    return "No clear tracked inside-to-outside motion cue; decide from the visual frames."
+
+
+def correct_enter_exit_direction(event, rows, candidate, config):
+    """Correct only an existing enter/exit label from a strong temporal track cue.
+
+    This function never creates an interaction and never changes another action
+    type into enter/exit. Ambiguous trajectories retain the VLM label.
+    """
+    if event.get("type") not in {"enter", "exit"} or not config.get("direction_correction_enabled", False):
+        return event, None
+    start, end = event["start_frame"], event["end_frame"]
+    context = int(config.get("direction_context_frames", 4))
+    observations = []
+    for index in range(max(0, start - context), min(len(rows), end + context + 1)):
+        objects = {obj["id"]: obj for obj in rows[index]["objects"]}
+        person, vehicle = objects.get(candidate["person_id"]), objects.get(candidate["vehicle_id"])
+        if not person or not vehicle:
+            continue
+        px1, py1, px2, py2 = person["bbox"]
+        vx1, vy1, vx2, vy2 = vehicle["bbox"]
+        center = ((px1 + px2) / 2, (py1 + py2) / 2)
+        inside = vx1 <= center[0] <= vx2 and vy1 <= center[1] <= vy2
+        dx, dy = max(vx1 - px2, px1 - vx2, 0), max(vy1 - py2, py1 - vy2, 0)
+        gap = (dx * dx + dy * dy) ** .5 / max(vx2 - vx1, vy2 - vy1, 1e-6)
+        observations.append((index, inside, gap))
+    edge_count = int(config.get("direction_edge_observations", 2))
+    if len(observations) < edge_count * 2:
+        return event, None
+    early, late = observations[:edge_count], observations[-edge_count:]
+    early_inside = all(item[1] for item in early)
+    late_inside = all(item[1] for item in late)
+    early_gap = sum(item[2] for item in early) / edge_count
+    late_gap = sum(item[2] for item in late) / edge_count
+    minimum_change = float(config.get("direction_min_gap_change", .08))
+    inferred = None
+    if early_inside and not late_inside and late_gap >= early_gap + minimum_change:
+        inferred = "exit"
+    elif not early_inside and late_inside and early_gap >= late_gap + minimum_change:
+        inferred = "enter"
+    if inferred is None or inferred == event["type"]:
+        return event, None
+    corrected = {**event, "type": inferred}
+    return corrected, (f"Direction corrected from {event['type']} to {inferred}: tracked body center "
+                       f"changed from {'inside' if early_inside else 'outside'} to "
+                       f"{'inside' if late_inside else 'outside'} the vehicle, with normalized gap "
+                       f"{early_gap:.2f} -> {late_gap:.2f}.")
+
+
+def disappearance_return_cue(rows, candidate, config):
+    """Describe a person-track gap followed by return near the same vehicle."""
+    eligible = [row for row in rows if row["scene"] == candidate["scene"] and
+                candidate["start_s"] <= row["timestamp_s"] < candidate["end_s"]]
+    states = []
+    for row in eligible:
+        objects = {obj["id"]: obj for obj in row["objects"]}
+        person = objects.get(candidate["person_id"])
+        vehicle = objects.get(candidate["vehicle_id"])
+        # Predicted boxes bridge short detector misses. For this cue, only an
+        # observed person detection counts as visible.
+        visible = bool(person and person.get("observed", True))
+        near_vehicle = False
+        if visible and vehicle:
+            px1, py1, px2, py2 = person["bbox"]
+            vx1, vy1, vx2, vy2 = vehicle["bbox"]
+            dx = max(vx1 - px2, px1 - vx2, 0)
+            dy = max(vy1 - py2, py1 - vy2, 0)
+            near_vehicle = (dx * dx + dy * dy) ** .5 <= config.get("near_margin", .2) * max(
+                vx2 - vx1, vy2 - vy1, 1e-6)
+        alternatives = []
+        if vehicle:
+            vx1, vy1, vx2, vy2 = vehicle["bbox"]
+            scale = max(vx2 - vx1, vy2 - vy1, 1e-6)
+            for obj in objects.values():
+                if obj["kind"] != "person" or obj["id"] == candidate["person_id"] or not obj.get("observed", True):
+                    continue
+                ox1, oy1, ox2, oy2 = obj["bbox"]
+                dx = max(vx1 - ox2, ox1 - vx2, 0)
+                dy = max(vy1 - oy2, oy1 - vy2, 0)
+                if (dx * dx + dy * dy) ** .5 <= config.get("near_margin", .2) * scale:
+                    alternatives.append(obj)
+        states.append((row["frame_index"], row["timestamp_s"], visible, near_vehicle,
+                       person["bbox"] if visible else None, alternatives))
+    minimum = config.get("load_unload_gap_min_s", .3)
+    maximum = config.get("load_unload_gap_max_s", 3.0)
+    for start in range(1, len(states) - 1):
+        if states[start][2] or not states[start - 1][2] or not states[start - 1][3]:
+            continue
+        end = start
+        while end < len(states) and not states[end][2]:
+            end += 1
+        if end >= len(states):
+            continue
+        gap_s = states[end][1] - states[start - 1][1]
+        related_id = candidate["person_id"] if states[end][3] else None
+        return_index = end
+        alternative_points = [(position, obj) for position in range(start, end + 1)
+                              for obj in states[position][5]]
+        if alternative_points:
+            # A tracker ID switch is accepted only when the new person's center
+            # is close to the last target position, normalized by vehicle size.
+            before_box = states[start - 1][4]
+            bx = (before_box[0] + before_box[2]) / 2
+            by = (before_box[1] + before_box[3]) / 2
+            position, closest = min(alternative_points, key=lambda item: (
+                ((item[1]["bbox"][0] + item[1]["bbox"][2]) / 2 - bx) ** 2 +
+                ((item[1]["bbox"][1] + item[1]["bbox"][3]) / 2 - by) ** 2))
+            row = next(row for row in eligible if row["frame_index"] == states[position][0])
+            vehicle = next(obj for obj in row["objects"] if obj["id"] == candidate["vehicle_id"])
+            vx1, vy1, vx2, vy2 = vehicle["bbox"]
+            scale = max(vx2 - vx1, vy2 - vy1, 1e-6)
+            cx = (closest["bbox"][0] + closest["bbox"][2]) / 2
+            cy = (closest["bbox"][1] + closest["bbox"][3]) / 2
+            if ((cx - bx) ** 2 + (cy - by) ** 2) ** .5 <= config.get("load_unload_id_switch_distance", .35) * scale:
+                related_id = closest["id"]
+                return_index = position
+                gap_s = states[return_index][1] - states[start - 1][1]
+        if minimum <= gap_s <= maximum and related_id:
+            identity_note = ("the same track ID" if related_id == candidate["person_id"] else
+                             f"nearby person track {related_id}, a possible spatial ID continuation")
+            return ("Temporal track cue: the target person is visibly near the target vehicle at "
+                    f"frame {states[start - 1][0]}, is not observed for about {gap_s:.2f}s, and is "
+                    f"followed by {identity_note} near the same vehicle at frame {states[return_index][0]}. "
+                    "An orange box marks a possible continuation with a different tracker ID. Inspect the "
+                    "chronological images around this gap. If they show the person leaning/reaching "
+                    "into a door, trunk, or cargo opening and then withdrawing while remaining "
+                    "outside, you may classify load_unload even when the handled object is occluded. "
+                    "Do not classify load_unload from the track gap alone: ordinary occlusion, an ID "
+                    "switch, walking behind the vehicle, or a full-body cabin transition are not "
+                    "load_unload. A visible full-body transition is enter or exit."), {related_id}
+        start = end
+    return (("No qualifying near-vehicle disappearance-and-return pattern was found for this target "
+             "track; do not infer load_unload from track continuity."), set())
 
 
 def verify_candidates(path, rows, candidates, metadata, config, output, verifier_factory=QwenVerifier, resume=True):
@@ -297,12 +492,32 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
                             "reason": "Voting prefilter retained the Experiment 2 no-interaction decision",
                             "events": [], "voting": None, "postprocess_rejected_events": []})
             continue
+        load_cue, related_person_ids = ("", set())
+        if config.get("load_unload_disappearance_cue", False):
+            load_cue, related_person_ids = disappearance_return_cue(rows, candidate, config)
         images, indices = sample_window(path, rows, candidate, config["sample_frames"],
-                                        config.get("sampling_strategy", "uniform"))
+                                        config.get("sampling_strategy", "uniform"), related_person_ids)
         ballots = build_ballots(indices, config.get("vote_ballots", 5), config.get("vote_ballot_frames", 6))
         voting = config.get("voting_enabled", False)
-        prompt = (VOTING_PROMPT.format(**candidate, ballots=json.dumps(ballots)) if voting else
-                  PROMPT.format(**candidate) + "\nAllowed frame indices in chronological order: " + str(indices))
+        untracked_exit = candidate["person_id"].startswith("untracked_")
+        if untracked_exit:
+            prompt = UNTRACKED_EXIT_PROMPT.format(**candidate, indices=indices)
+        else:
+            prompt = (VOTING_PROMPT.format(**candidate, ballots=json.dumps(ballots)) if voting else
+                      PROMPT.format(**candidate) + "\nAllowed frame indices in chronological order: " + str(indices))
+            if config.get("load_unload_access_rule", False):
+                if voting:
+                    prompt = prompt.replace("loading or unloading an object",
+                                            "handling inside a vehicle compartment that opens or is open")
+                    prompt += "\n" + LOAD_UNLOAD_ACCESS_RULE
+                else:
+                    prompt = prompt.replace(
+                        "load_unload requires a visible OBJECT\ntransfer; a person getting into a car is enter, not load_unload.",
+                        LOAD_UNLOAD_ACCESS_RULE)
+            if config.get("exit_motion_cue", False):
+                prompt += "\n" + exit_motion_cue(rows, candidate, indices)
+            if config.get("load_unload_disappearance_cue", False):
+                prompt += "\n" + load_cue
         signature = fingerprint({"candidate": candidate, "source": metadata["source_sha256"],
                                  "config": config, "prompt": prompt, "indices": indices,
                                  "tracks": [rows[i] for i in indices], "sampling_version": 5})
@@ -331,7 +546,7 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
                 config.get("vote_min_consecutive", 2))
             write_json(file, {"candidate": candidate, "frame_ids": indices, "ballots": ballots,
                               "raw": cached["raw"], "decision": decision, "voting": voting_record})
-        elif not any({candidate["person_id"], candidate["vehicle_id"]} <= {obj["id"] for obj in rows[i]["objects"]} for i in indices):
+        elif not untracked_exit and not any({candidate["person_id"], candidate["vehicle_id"]} <= {obj["id"] for obj in rows[i]["objects"]} for i in indices):
             decision = {"decision": "uncertain", "reason": "No sampled frame shows both target track IDs", "events": []}
         elif config["verifier"] == "review":
             decision = {"decision": "uncertain", "reason": "Review-only mode: no action verifier run", "events": []}
@@ -352,7 +567,15 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
             write_json(file, {"candidate": candidate, "frame_ids": indices, "ballots": ballots if voting else None,
                               "raw": text, "decision": decision, "voting": voting_record})
         rejected = []
-        for event in decision["events"]:
+        if untracked_exit and any(event["type"] != "exit" for event in decision["events"]):
+            decision = {"decision": "uncertain", "reason": "Initial vehicle probe supports only exit events", "events": []}
+        direction_notes = []
+        corrected_events = []
+        for original_event in decision["events"]:
+            event, direction_note = correct_enter_exit_direction(original_event, rows, candidate, config)
+            corrected_events.append(event)
+            if direction_note:
+                direction_notes.append(direction_note)
             start, end = event["start_frame"], event["end_frame"]
             boundary_context = max(0, config.get("vote_boundary_context_s", 0))
             if voting and boundary_context:
@@ -370,6 +593,10 @@ def verify_candidates(path, rows, candidates, metadata, config, output, verifier
                            "end_s": rows[end + 1]["timestamp_s"] if end + 1 < len(rows) else metadata["duration_s"]}],
                 "truncated_start": start == 0, "truncated_end": end == len(rows) - 1,
                 "evidence_frames": event["evidence_frames"], "group_id": None})
-        reviews.append({**candidate, **decision, "voting": voting_record,
+        review_decision = dict(decision)
+        review_decision["events"] = corrected_events
+        if direction_notes:
+            review_decision["reason"] = decision["reason"] + " " + " ".join(direction_notes)
+        reviews.append({**candidate, **review_decision, "voting": voting_record,
                         "postprocess_rejected_events": rejected})
     return events, reviews

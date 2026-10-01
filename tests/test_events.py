@@ -2,9 +2,10 @@ import copy
 
 import pytest
 
-from person_vehicle.events import ClipOutput, active_events, merge_events
+from person_vehicle.events import ClipOutput, active_events, collapse_physical_episodes, merge_events
 from person_vehicle.evaluate import evaluate, match_events, temporal_iou
-from person_vehicle.verify import build_ballots, parse_and_aggregate_votes, parse_decision, select_sample_rows
+from person_vehicle.verify import (build_ballots, correct_enter_exit_direction,
+                                   parse_and_aggregate_votes, parse_decision, select_sample_rows)
 
 
 def event(start=1, end=3, person="p1", action="enter"):
@@ -40,6 +41,21 @@ def test_merge_preserves_separate_episodes():
     merged = merge_events([event(), event(2, 4), event(5, 6)])
     assert len(merged) == 2
     assert merged[0]["spans"] == [{"start_s": 1, "end_s": 4}]
+
+
+def test_temporal_event_nms_merges_overlap_but_never_gap():
+    rows = [{"objects": [
+        {"id": "p1", "kind": "person", "bbox": [0, 0, 10, 20]},
+        {"id": "v1", "kind": "car", "bbox": [8, 0, 30, 20]}]}]
+    config = {"collapse_physical_episodes": True, "event_nms_temporal_iou": .5,
+              "event_nms_temporal_containment": .8}
+    overlapping = collapse_physical_episodes(
+        [event(1, 4, action="enter"), event(1.2, 3.8, action="exit")], rows, config)
+    assert len(overlapping) == 1
+    assert overlapping[0]["type"] == "other_interaction"
+    separate = collapse_physical_episodes(
+        [event(0, 1, action="exit"), event(3, 4, action="enter")], rows, config)
+    assert len(separate) == 2
 
 
 def test_schema_rejects_out_of_range():
@@ -103,3 +119,23 @@ def test_eval_counts_and_undefined_rates():
     assert result["false_alarms_per_minute"] == 1
     with pytest.raises(ValueError):
         evaluate({}, reference)
+
+
+def test_direction_correction_only_flips_existing_enter_exit():
+    rows = []
+    for index in range(6):
+        inside = index < 2
+        person_box = [40, 30, 60, 80] if inside else [115 + index * 5, 30, 135 + index * 5, 80]
+        rows.append({"objects": [
+            {"id": "p1", "kind": "person", "bbox": person_box},
+            {"id": "v1", "kind": "car", "bbox": [20, 20, 120, 100]},
+        ]})
+    config = {"direction_correction_enabled": True, "direction_context_frames": 0,
+              "direction_edge_observations": 2, "direction_min_gap_change": .05}
+    candidate = {"person_id": "p1", "vehicle_id": "v1"}
+    wrong = {"type": "enter", "start_frame": 0, "end_frame": 5}
+    corrected, note = correct_enter_exit_direction(wrong, rows, candidate, config)
+    assert corrected["type"] == "exit" and "corrected" in note
+    other, note = correct_enter_exit_direction({**wrong, "type": "other_interaction"}, rows, candidate, config)
+    assert other["type"] == "other_interaction" and note is None
+

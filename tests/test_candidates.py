@@ -19,3 +19,18 @@ def test_scene_ids_do_not_join_encounters():
     rows = [{"scene": s, "timestamp_s": s + 1, "objects": objects} for s in [0, 1]]
     config = dict(near_margin=0.2, candidate_gap_s=1, context_s=1, window_s=8, window_overlap_s=2)
     assert len(propose(rows, 5, config)) == 2
+
+
+def test_head_scaled_proximity_accounts_for_perspective():
+    config = dict(near_margin=0.01, candidate_gap_s=1, context_s=1, window_s=8,
+                  window_overlap_s=2, head_scaled_candidate_distance=True,
+                  candidate_max_head_widths=2.0)
+    rows = [{"scene": 0, "timestamp_s": 1, "objects": [
+        {"id": "v", "kind": "car", "bbox": [20, 0, 40, 20]},
+        {"id": "near", "kind": "person", "bbox": [0, 0, 10, 20],
+         "head_bbox": [2, 0, 8, 6]},
+        {"id": "far", "kind": "person", "bbox": [50, 0, 60, 20],
+         "head_bbox": [53, 0, 55, 2]}]}]
+    candidates = propose(rows, 3, config)
+    assert [candidate["person_id"] for candidate in candidates] == ["near"]
+
