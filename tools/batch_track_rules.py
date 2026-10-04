@@ -95,7 +95,8 @@ def emergence(rows,raw):
  return cues
 def main():
  p=argparse.ArgumentParser(); p.add_argument('--videos',type=Path,required=True); p.add_argument('--source-tracks',type=Path,required=True); p.add_argument('--raw',type=Path,required=True); p.add_argument('--output',type=Path,required=True); p.add_argument('--emergence',action='store_true'); p.add_argument('--no-appearance-split',action='store_true'); a=p.parse_args()
- for video in sorted(a.videos.glob('*.mp4')):
+ video_paths=[a.videos] if a.videos.is_file() else sorted(a.videos.glob('*.mp4'))
+ for video in video_paths:
   src=a.source_tracks/f'{video.stem}.jsonl'
   if not src.exists(): continue
   rows=[json.loads(x) for x in src.read_text().splitlines()]; cap=cv2.VideoCapture(str(video)); ims=[]

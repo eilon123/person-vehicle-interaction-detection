@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 import yaml
+from person_vehicle.io import read_json, videos, write_json
 
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -25,6 +26,29 @@ def execute(*parts):
     subprocess.run([str(part) for part in parts], cwd=PROJECT, check=True)
 
 
+def apply_final_postprocessing(input_path, output, config_path):
+    """Reproduce the appearance split and emergence stages used by Experiment 40."""
+    raw = output / "raw_person_detections"
+    execute(sys.executable, "tools/cache_person_detections.py", "--input", input_path,
+            "--config", config_path, "--output", raw)
+    execute(sys.executable, "tools/batch_track_rules.py", "--videos", input_path,
+            "--source-tracks", output / "tracks", "--raw", raw,
+            "--output", output, "--emergence")
+    for video in videos(input_path):
+        execute(sys.executable, "tools/finish_scene_trial.py", "--root", output,
+                "--video", video, "--config", output / "config.json")
+    execute(sys.executable, "tools/apply_emergence_overrides.py", "--root", output)
+
+
+def export_flat_interactions(output):
+    interactions = []
+    for clip_path in sorted((output / "clips").glob("*.json")):
+        clip = read_json(clip_path)
+        interactions.extend({"clip_id": clip.get("clip_id", clip_path.stem), **event}
+                            for event in clip.get("interactions", []))
+    write_json(output / "interactions.json", interactions)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run a complete numbered experiment and refresh the history report")
     parser.add_argument("--input", required=True, help="Video file or directory")
@@ -35,6 +59,8 @@ def main():
     parser.add_argument("--number", type=int, help="Explicit experiment number; defaults to the next available number")
     parser.add_argument("--description", help="Short description of what changed in this experiment")
     parser.add_argument("--no-resume", action="store_true")
+    parser.add_argument("--final-postprocess", action="store_true",
+                        help="Apply the appearance-split and emergence stages used by Experiment 40")
     args = parser.parse_args()
 
     root = Path(args.experiments_root).resolve()
@@ -60,6 +86,9 @@ def main():
     if args.no_resume:
         run_command.append("--no-resume")
     execute(*run_command)
+    if args.final_postprocess:
+        apply_final_postprocessing(args.input, output, generated_config)
+    export_flat_interactions(output)
     execute(sys.executable, "-m", "person_vehicle", "evaluate", "--pred", output,
             "--reference", ground_truth, "--subset", "all", "--binary-timeline",
             "--output", output / "manual_binary_metrics.json")

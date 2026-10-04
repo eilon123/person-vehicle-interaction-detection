@@ -38,6 +38,11 @@ Run everything with one command:
 python tools\quickstart.py --input "data\videos" --output "outputs\experiments"
 ```
 
+This command uses `configs/experiment_40.yaml`. It runs the detector/tracker and
+VLM, caches a raw person-detection pass, applies the conservative appearance
+split and Emergence recovery used by Experiment 40, regenerates affected events,
+then builds the KPI report, Live Review, descriptions, and annotated videos.
+
 The first run downloads the model assets and can take considerable time. Later
 runs reuse matching tracking/model caches. When the command finishes, open:
 
@@ -45,6 +50,7 @@ runs reuse matching tracking/model caches. When the command finishes, open:
 outputs\experiments\experiment_1\kpi_dashboard.html   KPI report
 outputs\experiments\experiment_1\live_review.html     Interactive review
 outputs\experiments\experiment_1\annotated\           Annotated MP4 files
+outputs\experiments\experiment_1\interactions.json    Flat machine-readable interaction list
 outputs\experiments\experiment_1\clips\               Final event JSON
 outputs\experiments\experiment_1\vlm_descriptions\    Concise and raw VLM text
 outputs\experiments\all_experiments.html               Experiment comparison
@@ -68,7 +74,7 @@ python -m venv .venv
 python -m pip install --upgrade pip
 python -m pip install -r requirements.lock --extra-index-url https://download.pytorch.org/whl/cu126
 python -m pip install -e . --no-deps
-python -m person_vehicle download-assets
+python -m person_vehicle download-assets --config configs/experiment_40.yaml
 ```
 
 `requirements.lock` records the tested environment, including CUDA-specific torch
@@ -80,7 +86,7 @@ For this working checkout, the tested interpreter is currently
 `..\.venv\Scripts\python.exe` in the parent workspace. A fresh clone can use the
 isolated `.venv` recipe above.
 
-Model downloads: YOLO11s from the Ultralytics asset release and
+Model downloads: YOLO26x from the Ultralytics v8.4.0 asset release and
 `Qwen/Qwen2.5-VL-7B-Instruct` from Hugging Face, loaded in 4-bit mode. `download-assets` saves detector
 checksums in `models/assets.json` and pins the VLM snapshot revision in the config.
 Inference uses local files; no clip is uploaded to an external service. Downloads
@@ -122,9 +128,8 @@ C:\black rover\Assignment26\Videos\
   NmlzoaDcOuI_6.mp4
 ```
 
-The current release configuration is `configs/experiment_39.yaml`. Experiment
-40 uses the same detections and interaction algorithm and adds structured,
-one-sentence VLM descriptions to the saved output and Live Review.
+The final release configuration is `configs/experiment_40.yaml`. It records the
+portable relative model path and the exact settings used for Experiment 40.
 
 ### Activate or call the virtual environment
 
@@ -147,17 +152,17 @@ Choose an unused number; the runner refuses to overwrite an existing experiment.
 ```powershell
 & $python tools\run_experiment.py `
   --input $videos `
-  --config configs\experiment_39.yaml `
-  --reference "$results\ground_truth_7_scenes.json" `
+  --config configs\experiment_40.yaml `
+  --reference annotations\manual\events.json `
   --experiments-root $results `
   --number 41 `
-  --description "Experiment 39 algorithm with final interaction descriptions"
+  --description "Experiment 40 FINAL" `
+  --final-postprocess
 ```
 
-The reference above matches the current seven-scene cumulative report, which
-excludes the deliberately omitted long `gt1125_06` run. Replace it with
-`annotations\manual\events.json` when running and comparing a clean set of
-complete eight-scene experiments.
+The bundled reference covers the assignment clips and is used only to produce
+the included comparative KPI report. For unrelated footage, provide a matching
+reference file or run the lower-level pipeline without evaluation.
 
 Omit `--number` to choose the next available number automatically. Add
 `--no-resume` only when every applicable cached stage must be recomputed. Tracking
@@ -174,7 +179,7 @@ separate experiment output root or a clearly named scene trial:
 & $python -m person_vehicle run `
   --input "$videos\iMGR_0AG3a8_2_3.mp4" `
   --output "$results\scene_trials\iMGR_trial" `
-  --config configs\experiment_39.yaml
+  --config configs\experiment_40.yaml
 ```
 
 Do not compare a one-scene trial to the full GT as though it were a complete
@@ -191,7 +196,7 @@ without loading the VLM:
 & $python -m person_vehicle track `
   --input $videos `
   --output "$results\tracking_trial" `
-  --config configs\experiment_39.yaml
+  --config configs\experiment_40.yaml
 ```
 
 The important outputs are `tracks/*.jsonl` and `candidates/*.json`.
@@ -302,12 +307,11 @@ Refresh the report comparing all complete experiments in the same root:
 ```powershell
 & $python tools\experiment_history.py `
   --experiments-root $results `
-  --reference "$results\ground_truth_7_scenes.json" `
+  --reference "annotations\manual\events.json" `
   --output "$results\all_experiments.html"
 ```
 
-Use `annotations\manual\events.json` instead when every archived experiment in
-the root contains all eight labelled scenes. Reports are found at:
+Reports are found at:
 
 ```text
 experiment_N\kpi_dashboard.html   Per-experiment KPI

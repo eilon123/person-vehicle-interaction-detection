@@ -1,4 +1,4 @@
-"""One-command v2 pipeline run with reports, Live Review, and annotated MP4s."""
+"""One-command Experiment 40 run with reports, Live Review, and annotated MP4s."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", required=True, help="Directory containing the assignment MP4 files")
     parser.add_argument("--output", default="outputs/experiments", help="Numbered experiment root")
-    parser.add_argument("--config", default="configs/v2.0.yaml")
+    parser.add_argument("--config", default="configs/experiment_40.yaml")
     parser.add_argument("--reference", default="annotations/manual/events.json")
     parser.add_argument("--number", type=int, help="Unused experiment number; defaults to the next number")
     parser.add_argument("--skip-download", action="store_true", help="Require model assets to exist already")
@@ -40,7 +40,8 @@ def main() -> None:
 
     command: list[object] = [sys.executable, "tools/run_experiment.py", "--input", args.input,
         "--config", args.config, "--reference", args.reference, "--experiments-root", root,
-        "--number", number, "--description", "Portable v2.0 quick-start run"]
+        "--number", number, "--description", "Portable Experiment 40 FINAL run",
+        "--final-postprocess"]
     if args.no_resume:
         command.append("--no-resume")
     execute(*command)
@@ -57,6 +58,7 @@ def main() -> None:
     print("KPI report:", experiment / "kpi_dashboard.html")
     print("Live Review:", experiment / "live_review.html")
     print("Annotated MP4s:", experiment / "annotated")
+    print("All interactions:", experiment / "interactions.json")
     print("Structured events:", experiment / "clips")
     print("VLM descriptions:", experiment / "vlm_descriptions")
 

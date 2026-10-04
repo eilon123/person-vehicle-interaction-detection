@@ -227,7 +227,9 @@ def main():
         target = Path(config["detector"])
         target.parent.mkdir(parents=True, exist_ok=True)
         if not target.exists():
-            urllib.request.urlretrieve(f"https://github.com/ultralytics/assets/releases/download/v8.3.0/{target.name}", target)
+            release = "v8.4.0" if target.name.lower().startswith("yolo26") else "v8.3.0"
+            urllib.request.urlretrieve(
+                f"https://github.com/ultralytics/assets/releases/download/{release}/{target.name}", target)
         assets = {"detector": str(target), "detector_sha256": sha256(target)}
         if config.get("head_detection_enabled", False):
             from huggingface_hub import hf_hub_download

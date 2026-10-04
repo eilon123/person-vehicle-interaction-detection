@@ -19,6 +19,41 @@ def test_next_experiment_number_ignores_unrelated_directories(tmp_path):
     assert tool.next_number(tmp_path) == 5
 
 
+def test_final_postprocessing_runs_experiment_40_stages(monkeypatch, tmp_path):
+    tool = load_tool("run_experiment")
+    video = tmp_path / "clip.mp4"
+    video.touch()
+    output = tmp_path / "experiment_40"
+    output.mkdir()
+    commands = []
+    monkeypatch.setattr(tool, "execute", lambda *parts: commands.append(tuple(map(str, parts))))
+
+    tool.apply_final_postprocessing(video, output, tmp_path / "config.yaml")
+
+    flattened = [" ".join(command) for command in commands]
+    assert any("cache_person_detections.py" in command for command in flattened)
+    assert any("batch_track_rules.py" in command and "--emergence" in command
+               for command in flattened)
+    assert any("finish_scene_trial.py" in command and str(video) in command
+               for command in flattened)
+    assert flattened[-1].endswith(f"apply_emergence_overrides.py --root {output}")
+
+
+def test_export_flat_interactions_includes_clip_id(tmp_path):
+    tool = load_tool("run_experiment")
+    clips = tmp_path / "clips"
+    clips.mkdir()
+    (clips / "scene.json").write_text(json.dumps({
+        "clip_id": "scene", "interactions": [{"event_id": "e001", "type": "exit"}]
+    }), encoding="utf-8")
+
+    tool.export_flat_interactions(tmp_path)
+
+    assert json.loads((tmp_path / "interactions.json").read_text(encoding="utf-8")) == [
+        {"clip_id": "scene", "event_id": "e001", "type": "exit"}
+    ]
+
+
 def test_history_contains_experiment_details(tmp_path):
     tool = load_tool("experiment_history")
     run = tmp_path / "experiment_3"

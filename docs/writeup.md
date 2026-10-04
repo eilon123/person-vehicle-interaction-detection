@@ -2,65 +2,75 @@
 
 ## Approach
 
-The implementation accepts a clip or directory and emits validated per-clip JSON
-and annotated MP4s. PyAV decodes presentation timestamps; YOLO11s and BoT-SORT
-provide within-clip person/vehicle tracks. Nearby pairs generate overlapping
-temporal windows with context. Qwen2.5-VL-7B-Instruct, locally quantized to 4-bit,
-examines sixteen chronological frames from a fixed pair crop as video input.
-It returns an action, visible descriptions, and evidence frame indices. Strict
-validation rejects invented frame indices and inconsistent decisions; uncertain
-cases remain in a separate review artifact. Overlapping duplicate events for the
-same pair/action are merged. A geometry-only appearance/disappearance baseline
-is included for comparison.
+The system accepts one MP4 or a directory of independent clips and emits
+schema-validated JSON interactions, concise descriptions, reports, Live Review,
+and optional annotated MP4s. Experiment 40 is the submitted configuration.
 
-The renderer uses finalized JSON and per-frame tracks. It shows local IDs, active
-event labels, participant descriptions, clip time, and a timeline. It does not
-hold stale boxes through missed detections. H.264 exports preserve original
-presentation timing; every export is decoded again to check frame count and timing.
+YOLO26x detects people and vehicles. BoT-SORT creates clip-local tracks, while a
+second YOLO pass on suspicious motion crops near vehicles recovers small or
+partially occluded people. Nearby person–vehicle tracks create temporal
+candidates. Qwen2.5-VL-7B-Instruct examines chronologically sampled frames from a
+focused pair crop and decides whether an interaction exists and, if so, whether
+it is entry, exit, load/unload, or another interaction.
 
-## Assumptions and decisions
+Post-processing compensates for cases in which the VLM understands that contact
+occurred but misreads its direction. It uses motion before and after the candidate,
+disappearance near a vehicle, temporal continuity, and exclusive person–vehicle
+assignment. Door-operation decisions are normalized to load/unload for this task.
+Conservative appearance-change splitting avoids merging visibly different people
+under one tracker ID. The Emergence rule recovers a person who is initially visible
+only as a small region at a vehicle and then becomes larger while moving away;
+this provides evidence for an exit whose beginning was occluded.
 
-An interaction requires directed action, not proximity. Labels cover entry, exit,
-door operation, loading/unloading, and other contact such as removing a car cover.
-Associated door closure is included in entry/exit. Walking behind a vehicle is not
-evidence of entry. Clip-boundary actions are marked truncated. Descriptions use
-visible appearance rather than identity or demographics. Each event has one
-person–vehicle pair; identities reset between clips. Time spans are half-open.
+The final event description is aligned with the post-processed class, so the
+machine-readable sentence and action field cannot disagree. Detector/tracker and
+raw-person results are cached when their inputs and configuration match.
 
-The input inventory contains eight clips, approximately 128 seconds in total,
-with resolutions from 352×288 to 3840×2160 and differing frame rates. A low-resolution
-monochrome clip exposed a detector failure caused by excessive upscaling, so the
-inference size is capped according to source dimensions. The initial 3B verifier
-produced inconsistent JSON and action confusions; the retained configuration uses
-7B with local video input and focused crops. No video is sent to an external API.
+## Assumptions and ambiguity policy
+
+An interaction requires directed activity with a vehicle, rather than proximity.
+Walking past or behind a car is not an interaction. Entry and exit include the
+associated door action; carrying items to or from a vehicle is load/unload. Any
+other deliberate handling of a vehicle, such as removing a cover, is labeled
+`other_interaction`. Descriptions use visible clothing and vehicle appearance,
+without inferring identity or sensitive demographics. IDs are local to each clip,
+and time spans are half-open.
+
+Action boundaries are inherently ambiguous: reasonable annotators may disagree
+about whether entry starts on approach, at door opening, or when the body crosses
+the door. The manual labels use a relatively strict convention, while the project
+goal is to recover the existence of as many real interactions as possible. We
+therefore accepted some false positives, imperfect boundaries, and occasional
+type errors in exchange for recall.
 
 ## Evaluation and reproducibility
 
-The primary semantic KPI is pair-correct event F1 at temporal IoU 0.5, using
-one-to-one matching so duplicates count as false positives. The evaluator also
-reports precision/recall, type-aware results, IoU sensitivity, boundary errors,
-false alarms per minute, and optional proposal/passerby metrics. Undefined rates
-are null. Artifact completion, schema validity, and video timing are measured
-separately from semantic accuracy.
+The evaluator reports TP, FP, FN, precision, recall, and F1 with one-to-one event
+matching. It provides both type-aware evaluation and binary interaction evaluation,
+where detecting an interaction counts even if its subtype is wrong. Temporal IoU
+and occupancy are also reported at several overlap thresholds. Because interaction
+boundaries and even the scope of “interaction with a vehicle” are not uniquely
+defined, these KPIs are primarily comparative indicators rather than absolute
+ground truth. Some variants matched GT duration more closely; Experiment 40 was
+selected because it prioritized finding interactions over maximizing temporal IoU.
 
-Only one development clip currently has an assistant-reviewed reference and
-entity mapping. Its results are a development sanity check, not independent
-test performance. The other clips require reference adjudication before reporting
-full-corpus precision/recall/F1. Provisional KPI goals in the plan are not achieved
-scores. Machine-readable run results and limitations accompany the outputs.
-
-Packages, model revisions/checksums, configuration, and prompts are recorded.
-Seeds, sorted input order, deterministic sampling, and greedy decoding reduce
-variation; GPU determinism is not guaranteed across hardware. Caches are keyed
-by inputs/configuration/evidence. Tests cover event matching, validation, candidate
-generation, multi-span boundaries, and variable-frame-rate rendering.
+The repository pins Python packages, model revisions, configuration, prompts, and
+seed. Inputs are processed in sorted order and VLM decoding is greedy. GPU kernels
+can still vary across hardware. The source videos are supplied separately by the
+assignment and are not redistributed. `tools/quickstart.py` downloads the public
+model assets and reproduces the complete Experiment 40 sequence, including its
+post-processing and reports.
 
 ## Limitations and next steps
 
-Tracking fragments can split one real entity; detector misses prevent proposals.
-The VLM can confuse entry with door operation or hallucinate contact. Sampled-frame
-boundaries are approximate. Current inference does not include the proposed global
-VLM rescue scan or a separate dense boundary-refinement pass. Full reference
-annotation, negative-encounter labels, and description review take priority next,
-followed by track-fragment association and targeted temporal-action improvements.
-Generated predictions remain separate from reference annotations and manual review.
+The small dataset makes threshold and branch selection vulnerable to overfitting;
+a larger dataset with a fixed train/development/test split is the highest priority.
+Human detection remains weaker than vehicle detection, especially during severe
+occlusion, and should be evaluated with a dedicated person detector. Entry/exit
+would benefit from an explicit temporal state model covering approach, door use,
+disappearance, emergence, and departure. A vehicle-focused VLM or video model could
+better distinguish loading from unloading, recognize door state, and reject
+passers-by. Further work should also compare frame sampling strategies, separate
+binary interaction detection from subtype classification, use adaptive temporal
+expansion, automate error attribution by pipeline stage, and report runtime, GPU
+memory, and VLM-call cost alongside accuracy.

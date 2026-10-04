@@ -1,8 +1,8 @@
 {
-  "detector": "models\\yolo11s.pt",
-  "detector_sha256": "85a76fe86dd8afe384648546b56a7a78580c7cb7b404fc595f97969322d502d5",
+  "detector": "models\\yolo26x.pt",
+  "detector_sha256": "9fdd44a31c504547ffb81d2c6d9e6dac3493c8eaa8b0398d3f43bae6c7003e92",
   "vlm_revision": "cc594898137f460bfe9f0759e9844b3ce807cfb5",
-  "detector_url": "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt",
+  "detector_url": "https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26x.pt",
   "vlm_model": "Qwen/Qwen2.5-VL-7B-Instruct",
   "tracker_package_version": "8.4.164",
   "tracker_config": "# Ultralytics 🚀 AGPL-3.0 License - https://ultralytics.com/license\n\n# BoT-SORT tracker defaults for mode=\"track\"\n# Docs: https://docs.ultralytics.com/modes/track\n\ntracker_type: botsort # (str) Tracker backend: botsort\ntrack_high_thresh: 0.25 # (float) First-stage match threshold; raise for cleaner tracks, lower to keep more\ntrack_low_thresh: 0.1 # (float) Second-stage threshold for low-score matches; balances recovery vs drift\nnew_track_thresh: 0.25 # (float) Start a new track if no match ≥ this; higher reduces false tracks\ntrack_buffer: 30 # (int) Frames to keep lost tracks alive; higher handles occlusion, increases ID switches risk\nmatch_thresh: 0.8 # (float) Association similarity threshold (IoU/cost); tune with detector quality\nfuse_score: True # (bool) Fuse detection score with motion/IoU for matching; stabilizes weak detections\n\n# BoT-SORT specifics\ngmc_method: sparseOptFlow # (str) Global motion compensation: sparseOptFlow|orb|sift|ecc|none; helps moving camera scenes\n\n# ReID model related thresh\nproximity_thresh: 0.5 # (float) Min IoU to consider tracks proximate for ReID; higher is stricter\nappearance_thresh: 0.8 # (float) Min appearance similarity for ReID; raise to avoid identity swaps\nwith_reid: False # (bool) Enable ReID model use; needs extra model and compute\nmodel: auto # (str) ReID model name/path; \"auto\" uses detector features if available\n"
