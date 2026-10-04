@@ -1,0 +1,77 @@
+experiment_name: experiment_39
+experiment_change: Experiment 34 plus conservative appearance-correlation splitting
+  (gap <=2 frames, area ratio 0.6-1.6, persistent appearance change) and refined emergence
+  recovery from Experiment 38.
+seed: 42
+detector: C:/Users/eilon/hw work/person-vehicle-interaction/models/yolo26x.pt
+device: '0'
+image_size: 960
+detection_confidence: 0.2
+tracker: botsort.yaml
+motion_crop_enabled: true
+motion_crop_person_confidence: 0.1
+motion_crop_image_size: 960
+motion_crop_margin: 0.6
+motion_crop_min_fraction: 0.008
+motion_crop_max_regions: 4
+motion_crop_nms_iou: 0.5
+near_margin: 0.2
+exclusive_person_vehicle: true
+candidate_gap_s: 1.0
+context_s: 1.5
+window_s: 8.0
+window_overlap_s: 2.0
+verifier: qwen
+vlm_model: Qwen/Qwen2.5-VL-7B-Instruct
+vlm_revision: cc594898137f460bfe9f0759e9844b3ce807cfb5
+vlm_device: auto
+sample_frames: 16
+sampling_strategy: transition_dense
+require_multi_frame_event: true
+max_pixels: 200704
+max_new_tokens: 768
+load_in_4bit: true
+temporal_expansion_enabled: true
+temporal_expansion_near_margin: 0.25
+temporal_expansion_max_gap_s: 0.5
+temporal_expansion_max_extension_s: 2.0
+collapse_physical_episodes: true
+event_nms_temporal_iou: 0.5
+event_nms_temporal_containment: 0.8
+episode_merge_overlapping_people: true
+episode_person_overlap: 0.2
+episode_person_center_distance: 0.25
+vehicle_assignment_hysteresis: true
+vehicle_assignment_max_gap_s: 1.0
+vehicle_assignment_switch_margin: 0.05
+track_consistency_rules: true
+door_enter_disappear_window_s: 1.5
+enter_exit_min_gap_change: 0.08
+person_track_min_detections: 5
+person_track_min_duration_s: 0.75
+vehicle_assignment_center_weight: 0.0
+vehicle_assignment_confidence_weight: 0.0
+vehicle_assignment_hold_when_missing: false
+enter_exit_min_longitudinal_change: 0.45
+enter_exit_vehicle_edge_fraction: 0.18
+short_track_vehicle_exception: true
+short_track_vehicle_min_detections: 2
+short_track_vehicle_min_aspect_ratio: 0.85
+short_track_vehicle_endpoint_frames: 2
+horizontal_body_vehicle_assignment: true
+horizontal_body_min_aspect_ratio: 1.5
+horizontal_body_min_confidence: 0.2
+horizontal_body_anchor_fraction: 0.6
+horizontal_body_vertical_margin: 0.08
+horizontal_body_miss_penalty: 2.0
+occlusion_tracklet_stitch_enabled: false
+head_detection_enabled: false
+disappearance_enter_cue: true
+disappearance_enter_min_approach: 0.08
+disappearance_enter_max_final_gap: 0.1
+
+# Post-track release processing:
+# python tools/batch_track_rules.py ... --emergence
+# python tools/apply_emergence_overrides.py --root <experiment-output>
+# Appearance splitting is conservative: <=2-frame gap and 0.6-1.6 area ratio.
+# Emergence requires duplicate rejection, >=3x growth, and sustained outward motion.

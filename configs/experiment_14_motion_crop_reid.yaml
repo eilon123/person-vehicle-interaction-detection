@@ -1,11 +1,18 @@
-experiment_name: experiment_2
-experiment_change: transition-dense sampling, stricter action-state evidence, reject unsupported single-frame events
+experiment_name: experiment_14
+experiment_change: Experiment 2 with BoT-SORT ReID and motion-triggered high-resolution person detection in crops around vehicles
 seed: 42
 detector: models/yolo11s.pt
 device: '0'
 image_size: 960
 detection_confidence: 0.2
-tracker: botsort.yaml
+tracker: configs/botsort_reid.yaml
+motion_crop_enabled: true
+motion_crop_person_confidence: 0.1
+motion_crop_image_size: 960
+motion_crop_margin: 0.6
+motion_crop_min_fraction: 0.008
+motion_crop_max_regions: 4
+motion_crop_nms_iou: 0.5
 near_margin: 0.2
 exclusive_person_vehicle: true
 candidate_gap_s: 1.0

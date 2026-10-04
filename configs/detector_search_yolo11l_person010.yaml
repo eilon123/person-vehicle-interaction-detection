@@ -1,11 +1,12 @@
-experiment_name: experiment_2
-experiment_change: transition-dense sampling, stricter action-state evidence, reject unsupported single-frame events
+experiment_name: detector_search_yolo11l_person010
+experiment_change: Experiment 2 tracking with YOLO11l at 960 and class-specific person confidence 0.10; vehicle confidence remains 0.2
 seed: 42
-detector: models/yolo11s.pt
+detector: models/yolo11l.pt
 device: '0'
 image_size: 960
 detection_confidence: 0.2
-tracker: botsort.yaml
+person_detection_confidence: 0.10
+tracker: configs/botsort_person_balanced.yaml
 near_margin: 0.2
 exclusive_person_vehicle: true
 candidate_gap_s: 1.0

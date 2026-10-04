@@ -1,0 +1,474 @@
+{
+  "HIu4lM4B8hA_1": {
+    "duration_s": 10.0,
+    "interactions": [
+      {
+        "event_id": "ref002",
+        "type": "enter",
+        "persons": [
+          {
+            "person_id": "ref_person_2",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 3.8,
+            "end_s": 4.44
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          95,
+          111
+        ],
+        "group_id": null
+      },
+      {
+        "event_id": "ref002",
+        "type": "exit",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 0.0,
+            "end_s": 1.2
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          0,
+          30
+        ],
+        "group_id": null
+      },
+      {
+        "event_id": "ref003",
+        "type": "other_interaction",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 1.2,
+            "end_s": 6.12
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          30,
+          153
+        ],
+        "group_id": null
+      }
+    ]
+  },
+  "iMGR_0AG3a8_2_3": {
+    "duration_s": 27.29863506824659,
+    "interactions": [
+      {
+        "event_id": "ref002",
+        "type": "load_unload",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 3.749813,
+            "end_s": 15.59922
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          25,
+          104
+        ],
+        "group_id": null
+      },
+      {
+        "event_id": "ref003",
+        "type": "load_unload",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 17.549123,
+            "end_s": 24.148793
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          117,
+          161
+        ],
+        "group_id": null
+      },
+      {
+        "event_id": "ref004",
+        "type": "exit",
+        "persons": [
+          {
+            "person_id": "ref_person_2",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_2",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 16.049198,
+            "end_s": 19.649018
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          107,
+          131
+        ],
+        "group_id": null
+      },
+      {
+        "event_id": "ref004",
+        "type": "exit",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 0.0,
+            "end_s": 1.049948
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          0,
+          7
+        ],
+        "group_id": null
+      }
+    ]
+  },
+  "mKzCQKTHizw_0": {
+    "duration_s": 10.01,
+    "interactions": [
+      {
+        "event_id": "ref001",
+        "type": "enter",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 9.476133,
+            "end_s": 9.976633
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          284,
+          299
+        ],
+        "group_id": null
+      }
+    ]
+  },
+  "mKzCQKTHizw_1": {
+    "duration_s": 9.2092,
+    "interactions": [
+      {
+        "event_id": "ref001",
+        "type": "enter",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 5.4054,
+            "end_s": 6.673333
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          162,
+          200
+        ],
+        "group_id": null
+      }
+    ]
+  },
+  "NmlzoaDcOuI_1": {
+    "duration_s": 18.0,
+    "interactions": [
+      {
+        "event_id": "ref001",
+        "type": "exit",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 0.0,
+            "end_s": 4.166667
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          0,
+          25
+        ],
+        "group_id": null
+      },
+      {
+        "event_id": "ref002",
+        "type": "enter",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 11.0,
+            "end_s": 16.333333
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          66,
+          98
+        ],
+        "group_id": null
+      },
+      {
+        "event_id": "ref003",
+        "type": "exit",
+        "persons": [
+          {
+            "person_id": "ref_person_2",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 11.666667,
+            "end_s": 12.833333
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          70,
+          77
+        ],
+        "group_id": null
+      }
+    ]
+  },
+  "NmlzoaDcOuI_6": {
+    "duration_s": 17.0,
+    "interactions": [
+      {
+        "event_id": "ref002",
+        "type": "exit",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 0.0,
+            "end_s": 4.0
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          0,
+          24
+        ],
+        "group_id": null
+      }
+    ]
+  },
+  "gt1125_06": {
+    "duration_s": 20.02,
+    "interactions": [
+      {
+        "event_id": "ref001",
+        "type": "enter",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 8.241567,
+            "end_s": 10.844167
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          247,
+          325
+        ],
+        "group_id": null
+      },
+      {
+        "event_id": "ref002",
+        "type": "enter",
+        "persons": [
+          {
+            "person_id": "ref_person_2",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_2",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 11.4114,
+            "end_s": 17.3173
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          342,
+          519
+        ],
+        "group_id": null
+      }
+    ]
+  },
+  "1THkHYIQ_bY_0": {
+    "duration_s": 16.5,
+    "interactions": [
+      {
+        "event_id": "ref001",
+        "type": "other_interaction",
+        "persons": [
+          {
+            "person_id": "ref_person_1",
+            "description": "Visible person involved in interaction"
+          }
+        ],
+        "vehicle": {
+          "vehicle_id": "ref_vehicle_1",
+          "description": "Visible vehicle involved in interaction"
+        },
+        "spans": [
+          {
+            "start_s": 0.0,
+            "end_s": 8.8
+          }
+        ],
+        "truncated_start": false,
+        "truncated_end": false,
+        "evidence_frames": [
+          0,
+          264
+        ],
+        "group_id": null
+      }
+    ]
+  }
+}

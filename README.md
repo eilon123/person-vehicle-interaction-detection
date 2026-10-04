@@ -43,24 +43,27 @@ and the [Qwen model card](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct).
 ### Complete numbered experiment
 
 Use the experiment runner for every new algorithm variant. It automatically chooses
-the next experiment number, preserves a snapshot of the configuration and GT,
-runs inference and KPI evaluation, renders `ALG` versus `GT` videos, and refreshes
-one cumulative report covering every experiment in the same root directory.
+the next experiment number, preserves a snapshot of the configuration, uses the
+single canonical GT produced by the annotation tool, runs inference and KPI
+evaluation, creates a live `ALG` versus `GT` review page, and refreshes one
+cumulative report covering every experiment in the same root directory.
 
 ```powershell
 python tools/run_experiment.py `
   --input "C:\black rover\Assignment26\Videos" `
   --config configs/experiment_2.yaml `
-  --reference annotations/manual/events.json `
   --experiments-root "C:\path\to\saved_results" `
   --description "Short explanation of the algorithm change"
 ```
 
 Each run creates `experiment_N/kpi_dashboard.html`,
-`experiment_N/annotated_vs_gt/`, the raw outputs and metrics, plus
+`experiment_N/live_review.html`, the raw outputs and metrics, plus
 `all_experiments.html` at the root. Never reuse an experiment number; the command
 refuses to overwrite an existing experiment. Use `--number N` only when assigning
-a specific unused number.
+a specific unused number. Pass `--reference PATH` only when intentionally using
+a different GT source. The cumulative report recalculates every experiment from
+the canonical GT each time it is generated, so edits made in the annotation tool
+flow through to historical experiment reports too.
 
 ```powershell
 python -m person_vehicle audit --input "C:\black rover\Assignment26\Videos"
