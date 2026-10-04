@@ -17,7 +17,7 @@ and preferably an NVIDIA GPU with at least 8 GB VRAM. CPU execution is supported
 but VLM inference is substantially slower.
 
 ```powershell
-git clone <REPOSITORY_URL> person-vehicle-interaction
+git clone https://github.com/eilon123/person-vehicle-interaction-detection.git person-vehicle-interaction
 Set-Location person-vehicle-interaction
 
 python -m venv .venv
