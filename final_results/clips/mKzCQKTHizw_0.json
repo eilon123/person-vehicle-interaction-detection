@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "clip_id": "mKzCQKTHizw_0",
+  "source_sha256": "df3bf8726b1ab648fcbb4cfcacce08952d10420a0aafb8184071cc48b726aa5f",
+  "status": "ok",
+  "duration_s": 10.01,
+  "frame_count": 300,
+  "interactions": [
+    {
+      "event_id": "e001",
+      "type": "enter",
+      "persons": [
+        {
+          "person_id": "p00_043",
+          "description": "Person p00_043 is wearing a light-colored jacket and dark pants."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_040",
+        "description": "Vehicle v00_040 is a silver sedan."
+      },
+      "spans": [
+        {
+          "start_s": 9.4094,
+          "end_s": 9.976633333333334
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        283
+      ],
+      "group_id": null
+    }
+  ],
+  "error": null
+}

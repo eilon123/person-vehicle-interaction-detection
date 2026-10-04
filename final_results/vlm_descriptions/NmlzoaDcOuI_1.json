@@ -1,0 +1,70 @@
+{
+  "schema_version": "2.0",
+  "experiment": "experiment_40",
+  "clip_id": "NmlzoaDcOuI_1",
+  "descriptions": [
+    {
+      "description_id": "d0001",
+      "event_id": "e001",
+      "candidate_ids": [
+        "c0001"
+      ],
+      "person_ids": [
+        "p00_020"
+      ],
+      "person_id": "p00_020",
+      "vehicle_id": "v00_001",
+      "start_s": 1.8333333333333333,
+      "end_s": 6.833333333333333,
+      "decision": "interaction",
+      "final_type": "exit",
+      "description": "Person p00_020 wearing a white shirt and dark shorts exits silver sedan (v00_001).",
+      "raw_vlm_descriptions": [
+        "The person p00_020 is seen entering the vehicle v00_001. The person's body transitions from being outside the vehicle to being inside, as indicated by their position relative to the vehicle's boundaries. This transition is clearly visible across multiple frames."
+      ],
+      "source": "final_event_with_vlm_evidence"
+    },
+    {
+      "description_id": "d0002",
+      "event_id": "e002",
+      "candidate_ids": [
+        "c0002"
+      ],
+      "person_ids": [
+        "p00_034"
+      ],
+      "person_id": "p00_034",
+      "vehicle_id": "v00_001",
+      "start_s": 9.0,
+      "end_s": 14.0,
+      "decision": "interaction",
+      "final_type": "enter",
+      "description": "Person p00_034 wearing a light-colored shirt and dark pants enters silver sedan (v00_001).",
+      "raw_vlm_descriptions": [
+        "The person p00_034 is seen moving from the left side of the frame towards the vehicle v00_001, indicating a potential entry into the vehicle. The person's position changes from being outside the vehicle to being partially inside, suggesting they are entering the vehicle."
+      ],
+      "source": "final_event_with_vlm_evidence"
+    },
+    {
+      "description_id": "d0003",
+      "event_id": "e003",
+      "candidate_ids": [
+        "c0003"
+      ],
+      "person_ids": [
+        "p00_034b"
+      ],
+      "person_id": "p00_034b",
+      "vehicle_id": "v00_001",
+      "start_s": 13.0,
+      "end_s": 14.5,
+      "decision": "interaction",
+      "final_type": "enter",
+      "description": "Person p00_034b wearing light-colored clothing and a cap, partially visible through the rear passenger side window enters a silver sedan parked in a parking lot (v00_001).",
+      "raw_vlm_descriptions": [
+        "The person p00_034b is seen moving from outside the vehicle towards the rear passenger side door, indicating an intention to enter the vehicle. The person's position changes from being outside the vehicle to being partially inside, suggesting they have begun to interact with the vehicle."
+      ],
+      "source": "final_event_with_vlm_evidence"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": "2.0",
+  "experiment": "experiment_40",
+  "clip_id": "mKzCQKTHizw_1",
+  "descriptions": [
+    {
+      "description_id": "d0001",
+      "event_id": "e001",
+      "candidate_ids": [
+        "c0001"
+      ],
+      "person_ids": [
+        "p00_008"
+      ],
+      "person_id": "p00_008",
+      "vehicle_id": "v00_001",
+      "start_s": 3.8371666666666666,
+      "end_s": 6.673333333333333,
+      "decision": "interaction",
+      "final_type": "enter",
+      "description": "Person p00_008 wearing a light-colored top and dark pants enters silver sedan (v00_001).",
+      "raw_vlm_descriptions": [
+        "The person p00_008 is seen moving towards the vehicle v00_001 and eventually entering the vehicle. This is evidenced by the person's position relative to the vehicle and their movement across the visible boundary between the outside and inside of the vehicle."
+      ],
+      "source": "final_event_with_vlm_evidence"
+    }
+  ]
+}

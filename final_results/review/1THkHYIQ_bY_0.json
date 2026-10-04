@@ -1,0 +1,144 @@
+[
+  {
+    "person_id": "p00_018",
+    "vehicle_id": "v00_002",
+    "scene": 0,
+    "start_s": 0.1333333333333333,
+    "end_s": 3.533333333333333,
+    "candidate_id": "c0001",
+    "decision": "interaction",
+    "reason": "The person p00_018 is seen moving towards the vehicle v00_002 and appears to be interacting with it. In frames 47 and 48, the person is positioned near the vehicle, and in frame 49, the person is partially obscured by the vehicle, suggesting they are either entering or exiting the vehicle. The presence of a green bounding box around the person indicates their continued interaction with the vehicle.",
+    "events": [
+      {
+        "type": "other_interaction",
+        "start_frame": 47,
+        "end_frame": 49,
+        "person_description": "Person wearing dark clothing",
+        "vehicle_description": "Dark-colored sedan",
+        "evidence_frames": [
+          47,
+          48,
+          49
+        ]
+      }
+    ],
+    "voting": null,
+    "postprocess_rejected_events": []
+  },
+  {
+    "person_id": "p00_019",
+    "vehicle_id": "v00_002",
+    "scene": 0,
+    "start_s": 0.2666666666666666,
+    "end_s": 6.4,
+    "candidate_id": "c0002",
+    "decision": "interaction",
+    "reason": "The person p00_019 is seen moving towards the vehicle v00_002 and appears to be interacting with it. In frames 9 and 112, the person is positioned near the vehicle, suggesting an intention to interact. By frame 162, the person is closer to the vehicle, indicating a progression towards the vehicle. The person's proximity and movement suggest an intent to engage with the vehicle, which aligns with the definition of interaction.",
+    "events": [
+      {
+        "type": "other_interaction",
+        "start_frame": 9,
+        "end_frame": 162,
+        "person_description": "Person wearing dark clothing",
+        "vehicle_description": "Dark-colored sedan",
+        "evidence_frames": [
+          9,
+          112,
+          162
+        ]
+      }
+    ],
+    "voting": null,
+    "postprocess_rejected_events": []
+  },
+  {
+    "person_id": "p00_047",
+    "vehicle_id": "v00_002",
+    "scene": 0,
+    "start_s": 5.666666666666667,
+    "end_s": 9.533333333333333,
+    "candidate_id": "c0003",
+    "decision": "no_interaction",
+    "reason": "The person p00_047 does not show any visible directed action towards the vehicle v00_002. There is no evidence of entering, exiting, opening/closing a door, loading/unloading, or working on/touching the vehicle. The person remains outside the vehicle throughout the frames provided.",
+    "events": [],
+    "voting": null,
+    "postprocess_rejected_events": []
+  },
+  {
+    "person_id": "p00_047",
+    "vehicle_id": "v00_051",
+    "scene": 0,
+    "start_s": 6.133333333333334,
+    "end_s": 9.133333333333333,
+    "candidate_id": "c0004",
+    "decision": "interaction",
+    "reason": "The person p00_047 is seen moving towards the vehicle v00_051 and appears to be interacting with it. In frames 214 to 229, the person is positioned close to the vehicle, and their movements suggest they are either entering or exiting the vehicle. The person's position changes from being outside the vehicle to being partially inside, indicating a transition across a visible boundary.",
+    "events": [
+      {
+        "type": "other_interaction",
+        "start_frame": 214,
+        "end_frame": 229,
+        "person_description": "Person p00_047 is wearing dark clothing.",
+        "vehicle_description": "Vehicle v00_051 is silver.",
+        "evidence_frames": [
+          214,
+          229
+        ]
+      }
+    ],
+    "voting": null,
+    "postprocess_rejected_events": []
+  },
+  {
+    "person_id": "p00_053",
+    "vehicle_id": "v00_002",
+    "scene": 0,
+    "start_s": 8.066666666666666,
+    "end_s": 11.7,
+    "candidate_id": "c0005",
+    "decision": "no_interaction",
+    "reason": "The person p00_053 does not show any visible directed action towards the vehicle v00_002. There is no evidence of entering, exiting, opening/closing a door, loading/unloading, or working on/touching the vehicle.",
+    "events": [],
+    "voting": null,
+    "postprocess_rejected_events": []
+  },
+  {
+    "person_id": "p00_054",
+    "vehicle_id": "v00_002",
+    "scene": 0,
+    "start_s": 8.2,
+    "end_s": 11.266666666666667,
+    "candidate_id": "c0006",
+    "decision": "no_interaction",
+    "reason": "The person p00_054 does not show any visible directed action towards the vehicle v00_002. There is no evidence of entering, exiting, opening/closing a door, loading/unloading, or working on/touching the vehicle. The person appears to be walking past the vehicle without interacting with it.",
+    "events": [],
+    "voting": null,
+    "postprocess_rejected_events": []
+  },
+  {
+    "person_id": "p00_058",
+    "vehicle_id": "v00_076",
+    "scene": 0,
+    "start_s": 12.633333333333333,
+    "end_s": 15.733333333333333,
+    "candidate_id": "c0007",
+    "decision": "no_interaction",
+    "reason": "There is no visible directed action such as entering, exiting, opening/closing a door, loading/unloading, or working on/touching the vehicle by person p00_058. The person remains outside the vehicle throughout the frames provided.",
+    "events": [],
+    "voting": null,
+    "postprocess_rejected_events": []
+  },
+  {
+    "person_id": "p00_064",
+    "vehicle_id": "v00_059",
+    "scene": 0,
+    "start_s": 10.333333333333334,
+    "end_s": 13.333333333333334,
+    "candidate_id": "c0008",
+    "decision": "no_interaction",
+    "reason": "The person p00_064 does not show any visible directed action towards the vehicle v00_059. There is no evidence of entering, exiting, opening/closing a door, loading/unloading, or working on/touching the vehicle. The person appears to be moving away from the vehicle, but there is no clear indication of interaction.",
+    "events": [],
+    "voting": null,
+    "postprocess_rejected_events": []
+  }
+]

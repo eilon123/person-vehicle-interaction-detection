@@ -1,0 +1,94 @@
+{
+  "schema_version": "1.0",
+  "clip_id": "NmlzoaDcOuI_1",
+  "source_sha256": "646afe9d4de74a441337a7046fb910318269390549f8c06becab52e52388c491",
+  "status": "ok",
+  "duration_s": 18.0,
+  "frame_count": 108,
+  "interactions": [
+    {
+      "event_id": "e001",
+      "type": "exit",
+      "persons": [
+        {
+          "person_id": "p00_020",
+          "description": "Person wearing a white shirt and dark shorts"
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_001",
+        "description": "Silver sedan"
+      },
+      "spans": [
+        {
+          "start_s": 1.8333333333333333,
+          "end_s": 6.833333333333333
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        11,
+        12,
+        14,
+        20,
+        26,
+        32
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e002",
+      "type": "enter",
+      "persons": [
+        {
+          "person_id": "p00_034",
+          "description": "Person p00_034 is wearing a light-colored shirt and dark pants."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_001",
+        "description": "Vehicle v00_001 is a silver sedan."
+      },
+      "spans": [
+        {
+          "start_s": 9.0,
+          "end_s": 14.0
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        79
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e003",
+      "type": "enter",
+      "persons": [
+        {
+          "person_id": "p00_034b",
+          "description": "Person wearing light-colored clothing and a cap, partially visible through the rear passenger side window."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_001",
+        "description": "A silver sedan parked in a parking lot."
+      },
+      "spans": [
+        {
+          "start_s": 13.0,
+          "end_s": 14.5
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        81
+      ],
+      "group_id": null
+    }
+  ],
+  "error": null
+}

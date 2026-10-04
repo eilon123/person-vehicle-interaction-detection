@@ -1,0 +1,74 @@
+{
+  "schema_version": "2.0",
+  "experiment": "experiment_40",
+  "clip_id": "gt1125_06",
+  "descriptions": [
+    {
+      "description_id": "d0001",
+      "event_id": "e001",
+      "candidate_ids": [
+        "c0001",
+        "c0002"
+      ],
+      "person_ids": [
+        "p00_011"
+      ],
+      "person_id": "p00_011",
+      "vehicle_id": "v00_001",
+      "start_s": 3.3033,
+      "end_s": 10.677333333333333,
+      "decision": "interaction",
+      "final_type": "enter",
+      "description": "Person p00_011 wearing a light-colored shirt and dark pants enters white sedan (v00_001).",
+      "raw_vlm_descriptions": [
+        "The person p00_011 is seen moving towards the white vehicle v00_001 and eventually entering the vehicle. This is evidenced by the person's position changing from outside the vehicle to inside the vehicle across multiple frames.",
+        "The person p00_011 is seen moving towards the vehicle v00_001 and eventually entering the vehicle. The person's body transitions from being outside the vehicle to being inside, indicating an entry action."
+      ],
+      "source": "final_event_with_vlm_evidence"
+    },
+    {
+      "description_id": "d0002",
+      "event_id": "e002",
+      "candidate_ids": [
+        "c0005",
+        "c0006"
+      ],
+      "person_ids": [
+        "p00_012"
+      ],
+      "person_id": "p00_012",
+      "vehicle_id": "v00_002",
+      "start_s": 5.872533333333333,
+      "end_s": 15.148466666666666,
+      "decision": "interaction",
+      "final_type": "enter",
+      "description": "Person p00_012 wearing a dark shirt and light-colored pants enters a black SUV (v00_002).",
+      "raw_vlm_descriptions": [
+        "The person p00_012 is seen moving towards the vehicle v00_002 and eventually entering the vehicle. This is supported by the person's position changing from outside the vehicle to inside the vehicle across multiple frames.",
+        "The person p00_012 is seen moving towards the vehicle v00_002 and entering the vehicle through the open driver-side door."
+      ],
+      "source": "final_event_with_vlm_evidence"
+    },
+    {
+      "description_id": "d0003",
+      "event_id": "e003",
+      "candidate_ids": [
+        "c0015"
+      ],
+      "person_ids": [
+        "p00_020"
+      ],
+      "person_id": "p00_020",
+      "vehicle_id": "v00_024",
+      "start_s": 9.6096,
+      "end_s": 12.7127,
+      "decision": "interaction",
+      "final_type": "enter",
+      "description": "Person p00_020 wearing dark clothing enters green vehicle (v00_024).",
+      "raw_vlm_descriptions": [
+        "The person p00_020 is seen moving towards the vehicle v00_024 and appears to be interacting with it. In frames 302 and 309, the person is positioned near the vehicle, and by frame 330, the person is closer to the vehicle, indicating a progression towards it. The person's movement suggests an intention to interact with the vehicle, which could involve entering or exiting the vehicle."
+      ],
+      "source": "final_event_with_vlm_evidence"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": "2.0",
+  "experiment": "experiment_40",
+  "clip_id": "1THkHYIQ_bY_0",
+  "descriptions": [
+    {
+      "description_id": "d0001",
+      "event_id": "e001",
+      "candidate_ids": [
+        "c0002"
+      ],
+      "person_ids": [
+        "p00_019"
+      ],
+      "person_id": "p00_019",
+      "vehicle_id": "v00_002",
+      "start_s": 1.7666666666666666,
+      "end_s": 5.966666666666667,
+      "decision": "interaction",
+      "final_type": "other_interaction",
+      "description": "Person p00_019 wearing dark clothing interacts with dark-colored sedan (v00_002).",
+      "raw_vlm_descriptions": [
+        "The person p00_019 is seen moving towards the vehicle v00_002 and appears to be interacting with it. In frames 9 and 112, the person is positioned near the vehicle, suggesting an intention to interact. By frame 162, the person is closer to the vehicle, indicating a progression towards the vehicle. The person's proximity and movement suggest an intent to engage with the vehicle, which aligns with the definition of interaction."
+      ],
+      "source": "final_event_with_vlm_evidence"
+    }
+  ]
+}

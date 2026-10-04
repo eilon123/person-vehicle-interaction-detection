@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "clip_id": "NmlzoaDcOuI_6",
+  "source_sha256": "def44882c22b8305fcef0a48584d1f45b2996f28a1ce61b10b215f17edfdf2c1",
+  "status": "ok",
+  "duration_s": 17.0,
+  "frame_count": 102,
+  "interactions": [
+    {
+      "event_id": "e001",
+      "type": "exit",
+      "persons": [
+        {
+          "person_id": "p00_003",
+          "description": "Person wearing a green shirt and black shorts"
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_001",
+        "description": "Red sedan"
+      },
+      "spans": [
+        {
+          "start_s": 0.0,
+          "end_s": 8.333333333333334
+        }
+      ],
+      "truncated_start": true,
+      "truncated_end": false,
+      "evidence_frames": [
+        0,
+        44
+      ],
+      "group_id": null
+    }
+  ],
+  "error": null
+}

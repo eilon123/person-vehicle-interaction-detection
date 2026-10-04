@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "clip_id": "1THkHYIQ_bY_0",
+  "source_sha256": "7e602daf9a0d0e76c77bc15176ca4e649d09cff9f66f9df0be608dbaa2cece8d",
+  "status": "ok",
+  "duration_s": 16.5,
+  "frame_count": 495,
+  "interactions": [
+    {
+      "event_id": "e001",
+      "type": "other_interaction",
+      "persons": [
+        {
+          "person_id": "p00_019",
+          "description": "Person wearing dark clothing"
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_002",
+        "description": "Dark-colored sedan"
+      },
+      "spans": [
+        {
+          "start_s": 1.7666666666666666,
+          "end_s": 5.966666666666667
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        112,
+        162
+      ],
+      "group_id": null
+    }
+  ],
+  "error": null
+}

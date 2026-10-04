@@ -1,0 +1,27 @@
+[
+  {
+    "person_id": "p00_008",
+    "vehicle_id": "v00_001",
+    "scene": 0,
+    "start_s": 2.3371666666666666,
+    "end_s": 7.672833333333333,
+    "candidate_id": "c0001",
+    "decision": "interaction",
+    "reason": "The person p00_008 is seen moving towards the vehicle v00_001 and eventually entering the vehicle. This is evidenced by the person's position relative to the vehicle and their movement across the visible boundary between the outside and inside of the vehicle.",
+    "events": [
+      {
+        "type": "enter",
+        "start_frame": 116,
+        "end_frame": 183,
+        "person_description": "Person p00_008 is wearing a light-colored top and dark pants.",
+        "vehicle_description": "Vehicle v00_001 is a silver sedan.",
+        "evidence_frames": [
+          116,
+          183
+        ]
+      }
+    ],
+    "voting": null,
+    "postprocess_rejected_events": []
+  }
+]

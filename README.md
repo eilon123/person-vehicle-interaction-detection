@@ -5,6 +5,56 @@ a local vision-language model, exports structured events, and renders full-lengt
 annotated MP4s. The input clips have no audio. See [PLAN.md](PLAN.md) for the design
 and KPI definitions, and [docs/ambiguities.md](docs/ambiguities.md) for decisions.
 
+## Quick start: clone to complete results
+
+The following is the shortest supported path on Windows. It installs the project,
+downloads the pinned detector and VLM assets, runs the full pipeline, evaluates
+the canonical assignment clips, creates HTML reports and Live Review, and renders
+annotated MP4 files.
+
+Requirements: Python 3.11 or newer, Git, approximately 35 GB free disk space,
+and preferably an NVIDIA GPU with at least 8 GB VRAM. CPU execution is supported
+but VLM inference is substantially slower.
+
+```powershell
+git clone <REPOSITORY_URL> person-vehicle-interaction
+Set-Location person-vehicle-interaction
+
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.lock --extra-index-url https://download.pytorch.org/whl/cu126
+python -m pip install -e . --no-deps
+```
+
+Copy the eight assignment MP4 files into a directory such as `data\videos`.
+Source videos and model weights are intentionally excluded from Git because of
+their size. The expected clip names are listed under
+[Paths used in this workspace](#paths-used-in-this-workspace).
+
+Run everything with one command:
+
+```powershell
+python tools\quickstart.py --input "data\videos" --output "outputs\experiments"
+```
+
+The first run downloads the model assets and can take considerable time. Later
+runs reuse matching tracking/model caches. When the command finishes, open:
+
+```text
+outputs\experiments\experiment_1\kpi_dashboard.html   KPI report
+outputs\experiments\experiment_1\live_review.html     Interactive review
+outputs\experiments\experiment_1\annotated\           Annotated MP4 files
+outputs\experiments\experiment_1\clips\               Final event JSON
+outputs\experiments\experiment_1\vlm_descriptions\    Concise and raw VLM text
+outputs\experiments\all_experiments.html               Experiment comparison
+```
+
+Use `--skip-download` after the assets are installed. Add `--number N` to choose
+an explicit unused experiment number. To run the detector on unrelated videos,
+use `person_vehicle run`; the bundled KPI reference applies only to the supplied
+assignment clip IDs and must not be used to claim accuracy on other footage.
+
 ## Setup
 
 Run commands from this repository root. Tested on Windows, Python 3.14, and an
@@ -37,6 +87,300 @@ Inference uses local files; no clip is uploaded to an external service. Download
 require network access. Record model/library licenses when distributing: see
 [Ultralytics licensing](https://github.com/ultralytics/ultralytics/blob/main/LICENSE)
 and the [Qwen model card](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct).
+
+## Operational guide for the current workspace
+
+This section is the practical entry point for running the current algorithm,
+creating reports, rendering videos, and finding the outputs. Commands use
+PowerShell and assume the current local directory layout. Change the four path
+variables when running from another machine.
+
+### Paths used in this workspace
+
+```powershell
+$repo = "C:\Users\eilon\hw work\person-vehicle-interaction"
+$python = "C:\Users\eilon\hw work\.venv\Scripts\python.exe"
+$videos = "C:\black rover\Assignment26\Videos"
+$results = "C:\Users\eilon\Documents\Codex\2026-09-28\new-chat\outputs\saved_results"
+
+Set-Location $repo
+$env:PYTHONPATH = "$repo\src"
+```
+
+The input directory contains the original MP4 files. A command that accepts
+`--input` can normally receive either this directory or one specific MP4:
+
+```text
+C:\black rover\Assignment26\Videos\
+  1THkHYIQ_bY_0.mp4
+  gt1125_06.mp4
+  HIu4lM4B8hA_1.mp4
+  iMGR_0AG3a8_2_3.mp4
+  mKzCQKTHizw_0.mp4
+  mKzCQKTHizw_1.mp4
+  NmlzoaDcOuI_1.mp4
+  NmlzoaDcOuI_6.mp4
+```
+
+The current release configuration is `configs/experiment_39.yaml`. Experiment
+40 uses the same detections and interaction algorithm and adds structured,
+one-sentence VLM descriptions to the saved output and Live Review.
+
+### Activate or call the virtual environment
+
+Either activate the environment once:
+
+```powershell
+& "C:\Users\eilon\hw work\.venv\Scripts\Activate.ps1"
+```
+
+or use `& $python` in every command, as shown below. Calling the interpreter by
+its full path is safer in scripts because it does not depend on shell activation.
+
+### Run a complete numbered experiment
+
+This is the recommended command for a new experiment. It runs the algorithm,
+evaluates it against the manual GT, creates the KPI dashboard, exports structured
+VLM descriptions, creates Live Review, and refreshes the experiment history.
+Choose an unused number; the runner refuses to overwrite an existing experiment.
+
+```powershell
+& $python tools\run_experiment.py `
+  --input $videos `
+  --config configs\experiment_39.yaml `
+  --reference "$results\ground_truth_7_scenes.json" `
+  --experiments-root $results `
+  --number 41 `
+  --description "Experiment 39 algorithm with final interaction descriptions"
+```
+
+The reference above matches the current seven-scene cumulative report, which
+excludes the deliberately omitted long `gt1125_06` run. Replace it with
+`annotations\manual\events.json` when running and comparing a clean set of
+complete eight-scene experiments.
+
+Omit `--number` to choose the next available number automatically. Add
+`--no-resume` only when every applicable cached stage must be recomputed. Tracking
+uses a content-addressed shared cache and reads its saved result when the video,
+model, and tracking configuration fingerprint match. VLM responses are resumed
+from the experiment's `verification` directory, or from an explicitly configured
+reuse directory. Changed inputs invalidate the relevant cache rather than
+silently reusing stale results.
+
+To run one scene only, pass the source MP4 instead of the directory and use a
+separate experiment output root or a clearly named scene trial:
+
+```powershell
+& $python -m person_vehicle run `
+  --input "$videos\iMGR_0AG3a8_2_3.mp4" `
+  --output "$results\scene_trials\iMGR_trial" `
+  --config configs\experiment_39.yaml
+```
+
+Do not compare a one-scene trial to the full GT as though it were a complete
+experiment. The cumulative report expects every scene present in its chosen GT.
+If a historical experiment deliberately omits `gt1125_06`, generate the history
+with the corresponding seven-scene GT file rather than mixing evaluation sets.
+
+### Run only tracking and candidate generation
+
+Use this command when inspecting detection, tracking, and candidate generation
+without loading the VLM:
+
+```powershell
+& $python -m person_vehicle track `
+  --input $videos `
+  --output "$results\tracking_trial" `
+  --config configs\experiment_39.yaml
+```
+
+The important outputs are `tracks/*.jsonl` and `candidates/*.json`.
+
+### Render annotated MP4 videos from saved results
+
+Rendering does not rerun YOLO or the VLM. It reads the saved event and track
+files and draws them over the original videos. For Experiment 40:
+
+```powershell
+$experiment = "$results\experiment_40"
+
+& $python -m person_vehicle render `
+  --input $videos `
+  --events "$experiment\clips" `
+  --tracks "$experiment\tracks" `
+  --reference "annotations\manual\events.json" `
+  --output "$experiment\annotated"
+```
+
+The resulting MP4 files are stored at:
+
+```text
+experiment_40\annotated\<clip_id>_annotated.mp4
+```
+
+Remove `--reference` when GT labels should not appear in the video. To render one
+scene, pass one MP4 to `--input`; the event and track directories can remain the
+same.
+
+### Create or refresh Live Review
+
+Live Review is an HTML viewer rather than a newly encoded video. It uses the
+original MP4 files, overlays the saved tracks, shows algorithm and GT timelines,
+and displays the final one-sentence VLM description active at the current time.
+
+```powershell
+& $python tools\create_live_review.py `
+  --input $videos `
+  --events "$experiment\clips" `
+  --tracks "$experiment\tracks" `
+  --descriptions "$experiment\vlm_descriptions" `
+  --reference "annotations\manual\events.json" `
+  --output "$experiment\live_review.html"
+```
+
+Add `--clip iMGR_0AG3a8_2_3` to create a viewer containing only one scene. Open
+`live_review.html` in a browser. The source MP4 paths are local, so moving the
+HTML to another computer without the source videos will leave the player empty.
+
+### Export concise VLM descriptions
+
+The exporter produces one JSON document per scene and includes final interactions
+only. `description` is one decisive sentence based on the final action after
+post-processing. `raw_vlm_descriptions` preserves the original detailed VLM text
+for later investigation.
+
+```powershell
+& $python tools\export_vlm_descriptions.py `
+  --clips "$experiment\clips" `
+  --reviews "$experiment\review" `
+  --output "$experiment\vlm_descriptions" `
+  --experiment experiment_40
+```
+
+Example structure:
+
+```json
+{
+  "event_id": "e001",
+  "person_ids": ["p00_020"],
+  "vehicle_id": "v00_001",
+  "start_s": 4.2,
+  "end_s": 7.8,
+  "decision": "interaction",
+  "final_type": "exit",
+  "description": "Person p00_020 wearing a white shirt exits a silver sedan.",
+  "raw_vlm_descriptions": ["Original detailed VLM response..."]
+}
+```
+
+### Generate KPI and comparison reports
+
+Evaluate interaction presence without requiring the predicted action type or
+participant IDs to match:
+
+```powershell
+& $python -m person_vehicle evaluate `
+  --pred $experiment `
+  --reference "annotations\manual\events.json" `
+  --subset all `
+  --binary-timeline `
+  --output "$experiment\manual_binary_metrics.json"
+```
+
+Create the readable per-experiment dashboard:
+
+```powershell
+& $python tools\kpi_dashboard.py `
+  --pred $experiment `
+  --reference "annotations\manual\events.json" `
+  --binary-timeline `
+  --output "$experiment\kpi_dashboard.html"
+```
+
+Refresh the report comparing all complete experiments in the same root:
+
+```powershell
+& $python tools\experiment_history.py `
+  --experiments-root $results `
+  --reference "$results\ground_truth_7_scenes.json" `
+  --output "$results\all_experiments.html"
+```
+
+Use `annotations\manual\events.json` instead when every archived experiment in
+the root contains all eight labelled scenes. Reports are found at:
+
+```text
+experiment_N\kpi_dashboard.html   Per-experiment KPI
+experiment_N\live_review.html     Interactive video review
+all_experiments.html              Cross-experiment comparison
+```
+
+### Open the manual annotation tool
+
+```powershell
+& $python -m person_vehicle annotate `
+  --input $videos `
+  --output "annotations\manual"
+```
+
+To display predictions while editing GT:
+
+```powershell
+& $python -m person_vehicle annotate `
+  --input $videos `
+  --output "annotations\manual" `
+  --pred $experiment `
+  --tracks "$experiment\tracks"
+```
+
+Confirmed annotations are saved immediately in
+`annotations\manual\events.json`; unresolved intervals are stored separately in
+`annotations\manual\uncertain.json`.
+
+### Debug videos
+
+Render every person and vehicle track for one scene:
+
+```powershell
+& $python tools\render_tracks_only.py `
+  --input "$videos\iMGR_0AG3a8_2_3.mp4" `
+  --tracks "$experiment\tracks\iMGR_0AG3a8_2_3.jsonl" `
+  --output "$experiment\debug\iMGR_tracks.mp4"
+```
+
+Render the interaction candidates before VLM filtering:
+
+```powershell
+& $python tools\render_candidates.py `
+  --input "$videos\iMGR_0AG3a8_2_3.mp4" `
+  --tracks "$experiment\tracks\iMGR_0AG3a8_2_3.jsonl" `
+  --candidates "$experiment\candidates\iMGR_0AG3a8_2_3.json" `
+  --output "$experiment\debug\iMGR_candidates.mp4"
+```
+
+### Output directory reference
+
+Each complete `experiment_N` directory can contain:
+
+| Path | Contents |
+|---|---|
+| `config.json` or `experiment_config.yaml` | Exact configuration used by the run |
+| `audit/` | Video metadata and input audit |
+| `tracks/*.jsonl` | Per-frame people and vehicle tracks |
+| `candidates/*.json` | Person–vehicle candidates before VLM filtering |
+| `verification/` | Cached/raw verifier artifacts |
+| `review/*.json` | Detailed VLM decisions for every reviewed candidate |
+| `clips/*.json` | Final machine-readable interactions |
+| `vlm_descriptions/*.json` | One-sentence descriptions of final interactions plus raw VLM text |
+| `annotated/*.mp4` | Encoded result videos |
+| `manual_binary_metrics.json` | Machine-readable KPI results |
+| `kpi_dashboard.html` | Human-readable KPI report |
+| `live_review.html` | Interactive review with tracks, GT, timelines, and descriptions |
+
+For the current workspace, the main results are under
+`C:\Users\eilon\Documents\Codex\2026-09-28\new-chat\outputs\saved_results`.
+Experiment 39 is the released algorithm result; Experiment 40 adds the structured
+VLM-description presentation without changing its interaction KPI.
 
 ## Run
 

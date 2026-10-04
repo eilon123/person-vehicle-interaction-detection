@@ -1,0 +1,118 @@
+{
+  "schema_version": "1.0",
+  "clip_id": "HIu4lM4B8hA_1",
+  "source_sha256": "69c7919268f94f03cf696b950ced7e56f5b85c2b262dfa71757a3f40e84d1f46",
+  "status": "ok",
+  "duration_s": 10.0,
+  "frame_count": 250,
+  "interactions": [
+    {
+      "event_id": "e001",
+      "type": "enter",
+      "persons": [
+        {
+          "person_id": "p00_005",
+          "description": "Person p00_005 is wearing dark clothing."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_001",
+        "description": "Vehicle v00_001 is white and appears to be a sedan."
+      },
+      "spans": [
+        {
+          "start_s": 0.28,
+          "end_s": 3.0
+        }
+      ],
+      "truncated_start": true,
+      "truncated_end": false,
+      "evidence_frames": [
+        23
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e002",
+      "type": "enter",
+      "persons": [
+        {
+          "person_id": "p00_017",
+          "description": "Person p00_017 is wearing dark clothing."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_001",
+        "description": "Vehicle v00_001 is white and appears to be a sedan."
+      },
+      "spans": [
+        {
+          "start_s": 3.48,
+          "end_s": 4.56
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        87,
+        88
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e003",
+      "type": "load_unload",
+      "persons": [
+        {
+          "person_id": "p00_022",
+          "description": "Person p00_022 is wearing dark clothing."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_001",
+        "description": "Vehicle v00_001 is a white sedan."
+      },
+      "spans": [
+        {
+          "start_s": 4.4,
+          "end_s": 6.08
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        110,
+        112,
+        138
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e004",
+      "type": "other_interaction",
+      "persons": [
+        {
+          "person_id": "p00_024",
+          "description": "Person p00_024 is wearing casual clothing."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_001",
+        "description": "Vehicle v00_001 is a white sedan."
+      },
+      "spans": [
+        {
+          "start_s": 4.6,
+          "end_s": 5.32
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        116
+      ],
+      "group_id": null
+    }
+  ],
+  "error": null
+}

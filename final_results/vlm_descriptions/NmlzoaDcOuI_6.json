@@ -1,0 +1,28 @@
+{
+  "schema_version": "2.0",
+  "experiment": "experiment_40",
+  "clip_id": "NmlzoaDcOuI_6",
+  "descriptions": [
+    {
+      "description_id": "d0001",
+      "event_id": "e001",
+      "candidate_ids": [
+        "c0001"
+      ],
+      "person_ids": [
+        "p00_003"
+      ],
+      "person_id": "p00_003",
+      "vehicle_id": "v00_001",
+      "start_s": 0.0,
+      "end_s": 8.333333333333334,
+      "decision": "interaction",
+      "final_type": "exit",
+      "description": "Person p00_003 wearing a green shirt and black shorts exits red sedan (v00_001).",
+      "raw_vlm_descriptions": [
+        "The person is seen entering the vehicle by moving their body into the cabin, which is evident from the progression of frames showing the person transitioning from being outside the vehicle to being inside."
+      ],
+      "source": "final_event_with_vlm_evidence"
+    }
+  ]
+}

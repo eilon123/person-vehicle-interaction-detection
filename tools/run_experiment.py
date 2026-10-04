@@ -65,8 +65,12 @@ def main():
             "--output", output / "manual_binary_metrics.json")
     execute(sys.executable, "tools/kpi_dashboard.py", "--pred", output, "--reference", ground_truth,
             "--binary-timeline", "--output", output / "kpi_dashboard.html")
+    execute(sys.executable, "tools/export_vlm_descriptions.py", "--clips", output / "clips",
+            "--reviews", output / "review", "--output", output / "vlm_descriptions",
+            "--experiment", f"experiment_{number}")
     execute(sys.executable, "tools/create_live_review.py", "--input", args.input,
             "--events", output / "clips", "--tracks", output / "tracks", "--reference", ground_truth,
+            "--descriptions", output / "vlm_descriptions",
             "--output", output / "live_review.html")
     execute(sys.executable, "tools/experiment_history.py", "--experiments-root", root,
             "--reference", ground_truth)

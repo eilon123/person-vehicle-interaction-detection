@@ -1,0 +1,99 @@
+{
+  "schema_version": "1.0",
+  "clip_id": "gt1125_06",
+  "source_sha256": "2658b4fd3ed56ca19b61787692f5b0e7ff1143f0f3f144510d4265b5dc5217a9",
+  "status": "ok",
+  "duration_s": 20.02,
+  "frame_count": 600,
+  "interactions": [
+    {
+      "event_id": "e001",
+      "type": "enter",
+      "persons": [
+        {
+          "person_id": "p00_011",
+          "description": "Person p00_011 is wearing a light-colored shirt and dark pants."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_001",
+        "description": "Vehicle v00_001 is a white sedan."
+      },
+      "spans": [
+        {
+          "start_s": 3.3033,
+          "end_s": 10.677333333333333
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        251,
+        276,
+        278,
+        279,
+        280,
+        304
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e002",
+      "type": "enter",
+      "persons": [
+        {
+          "person_id": "p00_012",
+          "description": "Person wearing a dark shirt and light-colored pants."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_002",
+        "description": "A black SUV."
+      },
+      "spans": [
+        {
+          "start_s": 5.872533333333333,
+          "end_s": 15.148466666666666
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        292,
+        335,
+        391,
+        396
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e003",
+      "type": "enter",
+      "persons": [
+        {
+          "person_id": "p00_020",
+          "description": "Person wearing dark clothing"
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_024",
+        "description": "Green vehicle"
+      },
+      "spans": [
+        {
+          "start_s": 9.6096,
+          "end_s": 12.7127
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        302,
+        309,
+        330
+      ],
+      "group_id": null
+    }
+  ],
+  "error": null
+}

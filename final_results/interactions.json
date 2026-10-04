@@ -1,0 +1,624 @@
+[
+  {
+    "clip_id": "1THkHYIQ_bY_0",
+    "event_id": "e001",
+    "type": "other_interaction",
+    "persons": [
+      {
+        "person_id": "p00_019",
+        "description": "Person wearing dark clothing"
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_002",
+      "description": "Dark-colored sedan"
+    },
+    "spans": [
+      {
+        "start_s": 1.7666666666666666,
+        "end_s": 5.966666666666667
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      112,
+      162
+    ],
+    "group_id": null,
+    "description": "Person p00_019 wearing dark clothing interacts with dark-colored sedan (v00_002)."
+  },
+  {
+    "clip_id": "gt1125_06",
+    "event_id": "e001",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_011",
+        "description": "Person p00_011 is wearing a light-colored shirt and dark pants."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_001",
+      "description": "Vehicle v00_001 is a white sedan."
+    },
+    "spans": [
+      {
+        "start_s": 3.3033,
+        "end_s": 10.677333333333333
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      251,
+      276,
+      278,
+      279,
+      280,
+      304
+    ],
+    "group_id": null,
+    "description": "Person p00_011 wearing a light-colored shirt and dark pants enters white sedan (v00_001)."
+  },
+  {
+    "clip_id": "gt1125_06",
+    "event_id": "e002",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_012",
+        "description": "Person wearing a dark shirt and light-colored pants."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_002",
+      "description": "A black SUV."
+    },
+    "spans": [
+      {
+        "start_s": 5.872533333333333,
+        "end_s": 15.148466666666666
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      292,
+      335,
+      391,
+      396
+    ],
+    "group_id": null,
+    "description": "Person p00_012 wearing a dark shirt and light-colored pants enters a black SUV (v00_002)."
+  },
+  {
+    "clip_id": "gt1125_06",
+    "event_id": "e003",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_020",
+        "description": "Person wearing dark clothing"
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_024",
+      "description": "Green vehicle"
+    },
+    "spans": [
+      {
+        "start_s": 9.6096,
+        "end_s": 12.7127
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      302,
+      309,
+      330
+    ],
+    "group_id": null,
+    "description": "Person p00_020 wearing dark clothing enters green vehicle (v00_024)."
+  },
+  {
+    "clip_id": "HIu4lM4B8hA_1",
+    "event_id": "e001",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_005",
+        "description": "Person p00_005 is wearing dark clothing."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_001",
+      "description": "Vehicle v00_001 is white and appears to be a sedan."
+    },
+    "spans": [
+      {
+        "start_s": 0.28,
+        "end_s": 3.0
+      }
+    ],
+    "truncated_start": true,
+    "truncated_end": false,
+    "evidence_frames": [
+      23
+    ],
+    "group_id": null,
+    "description": "Person p00_005 wearing dark clothing enters white sedan (v00_001)."
+  },
+  {
+    "clip_id": "HIu4lM4B8hA_1",
+    "event_id": "e002",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_017",
+        "description": "Person p00_017 is wearing dark clothing."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_001",
+      "description": "Vehicle v00_001 is white and appears to be a sedan."
+    },
+    "spans": [
+      {
+        "start_s": 3.48,
+        "end_s": 4.56
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      87,
+      88
+    ],
+    "group_id": null,
+    "description": "Person p00_017 wearing dark clothing enters white sedan (v00_001)."
+  },
+  {
+    "clip_id": "HIu4lM4B8hA_1",
+    "event_id": "e003",
+    "type": "load_unload",
+    "persons": [
+      {
+        "person_id": "p00_022",
+        "description": "Person p00_022 is wearing dark clothing."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_001",
+      "description": "Vehicle v00_001 is a white sedan."
+    },
+    "spans": [
+      {
+        "start_s": 4.4,
+        "end_s": 6.08
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      110,
+      112,
+      138
+    ],
+    "group_id": null,
+    "description": "Person p00_022 wearing dark clothing loads or unloads white sedan (v00_001)."
+  },
+  {
+    "clip_id": "HIu4lM4B8hA_1",
+    "event_id": "e004",
+    "type": "other_interaction",
+    "persons": [
+      {
+        "person_id": "p00_024",
+        "description": "Person p00_024 is wearing casual clothing."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_001",
+      "description": "Vehicle v00_001 is a white sedan."
+    },
+    "spans": [
+      {
+        "start_s": 4.6,
+        "end_s": 5.32
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      116
+    ],
+    "group_id": null,
+    "description": "Person p00_024 wearing casual clothing interacts with white sedan (v00_001)."
+  },
+  {
+    "clip_id": "iMGR_0AG3a8_2_3",
+    "event_id": "e001",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_004",
+        "description": "Person p00_004 is wearing a dark jacket and pants."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_005",
+      "description": "Vehicle v00_005 is a white SUV."
+    },
+    "spans": [
+      {
+        "start_s": 0.0,
+        "end_s": 2.6998650067496626
+      }
+    ],
+    "truncated_start": true,
+    "truncated_end": false,
+    "evidence_frames": [
+      0,
+      1,
+      13
+    ],
+    "group_id": null,
+    "description": "Person p00_004 wearing a dark jacket and pants enters white SUV (v00_005)."
+  },
+  {
+    "clip_id": "iMGR_0AG3a8_2_3",
+    "event_id": "e002",
+    "type": "load_unload",
+    "persons": [
+      {
+        "person_id": "p00_045",
+        "description": "Person p00_045 wearing dark pants and a light-colored shirt."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_005",
+      "description": "White vehicle v00_005 with a visible open driver's side door."
+    },
+    "spans": [
+      {
+        "start_s": 6.149692515374231,
+        "end_s": 6.899655017249137
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      41
+    ],
+    "group_id": null,
+    "description": "Person p00_045 wearing dark pants and a light-colored shirt loads or unloads white vehicle v00_005 with a visible open driver's side door."
+  },
+  {
+    "clip_id": "iMGR_0AG3a8_2_3",
+    "event_id": "e003",
+    "type": "other_interaction",
+    "persons": [
+      {
+        "person_id": "p00_111",
+        "description": "Person wearing a white shirt and dark pants"
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_005",
+      "description": "White vehicle"
+    },
+    "spans": [
+      {
+        "start_s": 15.899205039748013,
+        "end_s": 17.399130043497824
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      108,
+      111
+    ],
+    "group_id": null,
+    "description": "Person p00_111 wearing a white shirt and dark pants interacts with white vehicle (v00_005)."
+  },
+  {
+    "clip_id": "iMGR_0AG3a8_2_3",
+    "event_id": "e004",
+    "type": "load_unload",
+    "persons": [
+      {
+        "person_id": "p00_111",
+        "description": "Person p00_111 wearing a white shirt and dark pants."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_005",
+      "description": "Vehicle v00_005 is a white car."
+    },
+    "spans": [
+      {
+        "start_s": 16.499175041247938,
+        "end_s": 24.14879256037198
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      113,
+      123,
+      140,
+      150
+    ],
+    "group_id": null,
+    "description": "Person p00_111 wearing a white shirt and dark pants loads or unloads white car (v00_005)."
+  },
+  {
+    "clip_id": "iMGR_0AG3a8_2_3",
+    "event_id": "e005",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_175",
+        "description": "Person p00_175 wearing dark clothing."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_005",
+      "description": "White vehicle v00_005."
+    },
+    "spans": [
+      {
+        "start_s": 22.94885255737213,
+        "end_s": 23.69881505924704
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      153
+    ],
+    "group_id": null,
+    "description": "Person p00_175 wearing dark clothing enters white vehicle v00_005."
+  },
+  {
+    "clip_id": "iMGR_0AG3a8_2_3",
+    "event_id": "e006",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_197",
+        "description": "Person p00_197 wearing dark clothing."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_005",
+      "description": "White vehicle v00_005."
+    },
+    "spans": [
+      {
+        "start_s": 25.948702564871756,
+        "end_s": 26.698665066746663
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      173
+    ],
+    "group_id": null,
+    "description": "Person p00_197 wearing dark clothing enters white vehicle v00_005."
+  },
+  {
+    "clip_id": "iMGR_0AG3a8_2_3",
+    "event_id": "e_emergence_07",
+    "type": "exit",
+    "persons": [
+      {
+        "person_id": "p00_127",
+        "description": "Person emerging from vehicle"
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_064",
+      "description": "Vehicle associated with emergence"
+    },
+    "spans": [
+      {
+        "start_s": 17.799010049497525,
+        "end_s": 20.049010049497525
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      132,
+      133,
+      134,
+      138,
+      140,
+      145,
+      146,
+      147
+    ],
+    "group_id": null,
+    "description": "Person p00_127 exits vehicle v00_064."
+  },
+  {
+    "clip_id": "mKzCQKTHizw_0",
+    "event_id": "e001",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_043",
+        "description": "Person p00_043 is wearing a light-colored jacket and dark pants."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_040",
+      "description": "Vehicle v00_040 is a silver sedan."
+    },
+    "spans": [
+      {
+        "start_s": 9.4094,
+        "end_s": 9.976633333333334
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      283
+    ],
+    "group_id": null,
+    "description": "Person p00_043 wearing a light-colored jacket and dark pants enters silver sedan (v00_040)."
+  },
+  {
+    "clip_id": "mKzCQKTHizw_1",
+    "event_id": "e001",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_008",
+        "description": "Person p00_008 is wearing a light-colored top and dark pants."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_001",
+      "description": "Vehicle v00_001 is a silver sedan."
+    },
+    "spans": [
+      {
+        "start_s": 3.8371666666666666,
+        "end_s": 6.673333333333333
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      116,
+      183
+    ],
+    "group_id": null,
+    "description": "Person p00_008 wearing a light-colored top and dark pants enters silver sedan (v00_001)."
+  },
+  {
+    "clip_id": "NmlzoaDcOuI_1",
+    "event_id": "e001",
+    "type": "exit",
+    "persons": [
+      {
+        "person_id": "p00_020",
+        "description": "Person wearing a white shirt and dark shorts"
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_001",
+      "description": "Silver sedan"
+    },
+    "spans": [
+      {
+        "start_s": 1.8333333333333333,
+        "end_s": 6.833333333333333
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      11,
+      12,
+      14,
+      20,
+      26,
+      32
+    ],
+    "group_id": null,
+    "description": "Person p00_020 wearing a white shirt and dark shorts exits silver sedan (v00_001)."
+  },
+  {
+    "clip_id": "NmlzoaDcOuI_1",
+    "event_id": "e002",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_034",
+        "description": "Person p00_034 is wearing a light-colored shirt and dark pants."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_001",
+      "description": "Vehicle v00_001 is a silver sedan."
+    },
+    "spans": [
+      {
+        "start_s": 9.0,
+        "end_s": 14.0
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      79
+    ],
+    "group_id": null,
+    "description": "Person p00_034 wearing a light-colored shirt and dark pants enters silver sedan (v00_001)."
+  },
+  {
+    "clip_id": "NmlzoaDcOuI_1",
+    "event_id": "e003",
+    "type": "enter",
+    "persons": [
+      {
+        "person_id": "p00_034b",
+        "description": "Person wearing light-colored clothing and a cap, partially visible through the rear passenger side window."
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_001",
+      "description": "A silver sedan parked in a parking lot."
+    },
+    "spans": [
+      {
+        "start_s": 13.0,
+        "end_s": 14.5
+      }
+    ],
+    "truncated_start": false,
+    "truncated_end": false,
+    "evidence_frames": [
+      81
+    ],
+    "group_id": null,
+    "description": "Person p00_034b wearing light-colored clothing and a cap, partially visible through the rear passenger side window enters a silver sedan parked in a parking lot (v00_001)."
+  },
+  {
+    "clip_id": "NmlzoaDcOuI_6",
+    "event_id": "e001",
+    "type": "exit",
+    "persons": [
+      {
+        "person_id": "p00_003",
+        "description": "Person wearing a green shirt and black shorts"
+      }
+    ],
+    "vehicle": {
+      "vehicle_id": "v00_001",
+      "description": "Red sedan"
+    },
+    "spans": [
+      {
+        "start_s": 0.0,
+        "end_s": 8.333333333333334
+      }
+    ],
+    "truncated_start": true,
+    "truncated_end": false,
+    "evidence_frames": [
+      0,
+      44
+    ],
+    "group_id": null,
+    "description": "Person p00_003 wearing a green shirt and black shorts exits red sedan (v00_001)."
+  }
+]

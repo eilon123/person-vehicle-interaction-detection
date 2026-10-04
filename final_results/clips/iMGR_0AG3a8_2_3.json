@@ -1,0 +1,206 @@
+{
+  "schema_version": "1.0",
+  "clip_id": "iMGR_0AG3a8_2_3",
+  "source_sha256": "eac82f752f622a6ae429ad7701980454619e43d2555822f5b3d7142459df4eec",
+  "status": "ok",
+  "duration_s": 27.29863506824659,
+  "frame_count": 182,
+  "interactions": [
+    {
+      "event_id": "e001",
+      "type": "enter",
+      "persons": [
+        {
+          "person_id": "p00_004",
+          "description": "Person p00_004 is wearing a dark jacket and pants."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_005",
+        "description": "Vehicle v00_005 is a white SUV."
+      },
+      "spans": [
+        {
+          "start_s": 0.0,
+          "end_s": 2.6998650067496626
+        }
+      ],
+      "truncated_start": true,
+      "truncated_end": false,
+      "evidence_frames": [
+        0,
+        1,
+        13
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e002",
+      "type": "load_unload",
+      "persons": [
+        {
+          "person_id": "p00_045",
+          "description": "Person p00_045 wearing dark pants and a light-colored shirt."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_005",
+        "description": "White vehicle v00_005 with a visible open driver's side door."
+      },
+      "spans": [
+        {
+          "start_s": 6.149692515374231,
+          "end_s": 6.899655017249137
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        41
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e003",
+      "type": "other_interaction",
+      "persons": [
+        {
+          "person_id": "p00_111",
+          "description": "Person wearing a white shirt and dark pants"
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_005",
+        "description": "White vehicle"
+      },
+      "spans": [
+        {
+          "start_s": 15.899205039748013,
+          "end_s": 17.399130043497824
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        108,
+        111
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e004",
+      "type": "load_unload",
+      "persons": [
+        {
+          "person_id": "p00_111",
+          "description": "Person p00_111 wearing a white shirt and dark pants."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_005",
+        "description": "Vehicle v00_005 is a white car."
+      },
+      "spans": [
+        {
+          "start_s": 16.499175041247938,
+          "end_s": 24.14879256037198
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        113,
+        123,
+        140,
+        150
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e005",
+      "type": "enter",
+      "persons": [
+        {
+          "person_id": "p00_175",
+          "description": "Person p00_175 wearing dark clothing."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_005",
+        "description": "White vehicle v00_005."
+      },
+      "spans": [
+        {
+          "start_s": 22.94885255737213,
+          "end_s": 23.69881505924704
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        153
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e006",
+      "type": "enter",
+      "persons": [
+        {
+          "person_id": "p00_197",
+          "description": "Person p00_197 wearing dark clothing."
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_005",
+        "description": "White vehicle v00_005."
+      },
+      "spans": [
+        {
+          "start_s": 25.948702564871756,
+          "end_s": 26.698665066746663
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        173
+      ],
+      "group_id": null
+    },
+    {
+      "event_id": "e_emergence_07",
+      "type": "exit",
+      "persons": [
+        {
+          "person_id": "p00_127",
+          "description": "Person emerging from vehicle"
+        }
+      ],
+      "vehicle": {
+        "vehicle_id": "v00_064",
+        "description": "Vehicle associated with emergence"
+      },
+      "spans": [
+        {
+          "start_s": 17.799010049497525,
+          "end_s": 20.049010049497525
+        }
+      ],
+      "truncated_start": false,
+      "truncated_end": false,
+      "evidence_frames": [
+        132,
+        133,
+        134,
+        138,
+        140,
+        145,
+        146,
+        147
+      ],
+      "group_id": null
+    }
+  ],
+  "error": null
+}
